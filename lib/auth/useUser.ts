@@ -15,37 +15,27 @@ export function useUser() {
 
   useEffect(() => {
     const supabase = createClient();
-    let attivo = true;
 
-    async function carica() {
-      const {
-        data: { user: u },
-      } = await supabase.auth.getUser();
-      if (!attivo) return;
+    // Usa la sessione fornita dall'evento (INITIAL_SESSION arriva al mount).
+    // NON chiamare getSession/getUser qui dentro: causerebbe un deadlock del lock auth.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user;
       if (!u) {
         setUser(null);
         setLoading(false);
         return;
       }
-      let nome = (u.user_metadata?.nome_completo as string) || "";
-      const { data: profilo } = await supabase
-        .from("profiles")
-        .select("nome_completo")
-        .eq("id", u.id)
-        .maybeSingle();
-      if (profilo?.nome_completo) nome = profilo.nome_completo;
-      if (!nome) nome = (u.email || "").split("@")[0];
-      if (!attivo) return;
+      const nome =
+        (u.user_metadata?.nome_completo as string) ||
+        (u.email || "").split("@")[0] ||
+        "Avvocato";
       setUser({ id: u.id, email: u.email || "", nome });
       setLoading(false);
-    }
+    });
 
-    carica();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => carica());
-    return () => {
-      attivo = false;
-      sub.subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   return { user, loading };

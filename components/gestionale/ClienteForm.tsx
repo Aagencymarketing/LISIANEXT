@@ -31,7 +31,8 @@ export function ClienteForm({
   const [tags, setTags] = useState((initial?.tags || []).join(", "));
   const [note, setNote] = useState(initial?.note || "");
 
-  const emit = (over: Partial<ClienteDraft> & { tipo?: TipoCliente } = {}) => {
+  // Emette il draft ad ogni cambiamento (con i valori aggiornati dello stato).
+  useEffect(() => {
     const draft: ClienteDraft = {
       tipo,
       nome: nome.trim() || undefined,
@@ -45,20 +46,14 @@ export function ClienteForm({
       indirizzo: indirizzo.trim() || undefined,
       note: note.trim() || undefined,
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-      ...over,
     };
     const valido =
       draft.tipo === "azienda"
         ? !!draft.ragioneSociale
         : !!(draft.nome || draft.cognome);
     onChange(draft, valido);
-  };
-
-  // emetti al primo render (per validare il bottone Salva)
-  useEffect(() => {
-    emit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tipo, nome, cognome, ragioneSociale, email, telefono, codiceFiscale, partitaIva, citta, indirizzo, tags, note]);
 
   return (
     <div className="space-y-4">
@@ -67,10 +62,7 @@ export function ClienteForm({
           <button
             key={t}
             type="button"
-            onClick={() => {
-              setTipo(t);
-              emit({ tipo: t });
-            }}
+            onClick={() => setTipo(t)}
             className={cn(
               "flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition",
               tipo === t
@@ -87,17 +79,17 @@ export function ClienteForm({
       {tipo === "persona" ? (
         <div className="grid grid-cols-2 gap-3">
           <Field label="Nome">
-            <Input value={nome} onChange={(e) => { setNome(e.target.value); emit(); }} placeholder="Mario" />
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Mario" />
           </Field>
           <Field label="Cognome">
-            <Input value={cognome} onChange={(e) => { setCognome(e.target.value); emit(); }} placeholder="Rossi" />
+            <Input value={cognome} onChange={(e) => setCognome(e.target.value)} placeholder="Rossi" />
           </Field>
         </div>
       ) : (
         <Field label="Ragione sociale">
           <Input
             value={ragioneSociale}
-            onChange={(e) => { setRagioneSociale(e.target.value); emit(); }}
+            onChange={(e) => setRagioneSociale(e.target.value)}
             placeholder="Esempio S.r.l."
           />
         </Field>
@@ -105,38 +97,38 @@ export function ClienteForm({
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Email">
-          <Input value={email} onChange={(e) => { setEmail(e.target.value); emit(); }} placeholder="email@dominio.it" />
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.it" />
         </Field>
         <Field label="Telefono">
-          <Input value={telefono} onChange={(e) => { setTelefono(e.target.value); emit(); }} placeholder="+39 ..." />
+          <Input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="+39 ..." />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         {tipo === "persona" ? (
           <Field label="Codice fiscale">
-            <Input value={codiceFiscale} onChange={(e) => { setCodiceFiscale(e.target.value); emit(); }} />
+            <Input value={codiceFiscale} onChange={(e) => setCodiceFiscale(e.target.value)} />
           </Field>
         ) : (
           <Field label="Partita IVA">
-            <Input value={partitaIva} onChange={(e) => { setPartitaIva(e.target.value); emit(); }} />
+            <Input value={partitaIva} onChange={(e) => setPartitaIva(e.target.value)} />
           </Field>
         )}
         <Field label="Città">
-          <Input value={citta} onChange={(e) => { setCitta(e.target.value); emit(); }} />
+          <Input value={citta} onChange={(e) => setCitta(e.target.value)} />
         </Field>
       </div>
 
       <Field label="Indirizzo">
-        <Input value={indirizzo} onChange={(e) => { setIndirizzo(e.target.value); emit(); }} />
+        <Input value={indirizzo} onChange={(e) => setIndirizzo(e.target.value)} />
       </Field>
 
       <Field label="Tag" hint="Separati da virgola, es. Locazioni, Cliente storico">
-        <Input value={tags} onChange={(e) => { setTags(e.target.value); emit(); }} />
+        <Input value={tags} onChange={(e) => setTags(e.target.value)} />
       </Field>
 
       <Field label="Note">
-        <Textarea value={note} onChange={(e) => { setNote(e.target.value); emit(); }} rows={3} />
+        <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
       </Field>
     </div>
   );
