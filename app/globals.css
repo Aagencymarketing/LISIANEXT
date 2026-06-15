@@ -1,26 +1,168 @@
 @import "tailwindcss";
 
+/* Dark mode driven by a `.dark` class on <html> (toggled in app) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --background: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-hover: #f1f2f5;
+
+  /* Text */
+  --foreground: #1a1d23;
+  --muted: #6b7280;
+  --muted-2: #9aa1ad;
+
+  /* Borders */
+  --border: #e7e9ee;
+  --border-strong: #d9dce3;
+
+  /* Brand */
+  --primary: #6366f1;
+  --primary-hover: #5457e5;
+  --primary-soft: #eef0fe;
+  --primary-foreground: #ffffff;
+
+  /* Accent (logo orange) */
+  --accent: #f5901f;
+
+  /* Status */
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #e11d48;
+  --info: #2563eb;
+
+  --ring: rgba(99, 102, 241, 0.35);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-pop: 0 8px 30px rgba(16, 24, 40, 0.12);
+}
+
+.dark {
+  --background: #0b0e14;
+  --surface: #141821;
+  --surface-2: #11151d;
+  --surface-hover: #1b212c;
+
+  --foreground: #e7eaf0;
+  --muted: #9aa3b2;
+  --muted-2: #6b7382;
+
+  --border: #232a35;
+  --border-strong: #2e3744;
+
+  --primary: #7c7ff5;
+  --primary-hover: #8c8ff7;
+  --primary-soft: #1e2030;
+  --primary-foreground: #ffffff;
+
+  --accent: #f5a13f;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #fb7185;
+  --info: #60a5fa;
+
+  --ring: rgba(124, 127, 245, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 10px 36px rgba(0, 0, 0, 0.55);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-2);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Utilities */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: fadeInUp 0.28s ease both;
+}
+
+@keyframes pulseDots {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }

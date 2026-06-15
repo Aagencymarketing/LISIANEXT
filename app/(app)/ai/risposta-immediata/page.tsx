@@ -1,0 +1,220 @@
+"use client";
+
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useApp } from "@/lib/store";
+import { generaRisposta, streamRisposta } from "@/lib/ai/mock";
+import { Markdown } from "@/components/Markdown";
+import { uid, oggi } from "@/lib/utils";
+import type { MessaggioChat } from "@/lib/types";
+import { Sparkles, Send, Plus, Square, MessageSquare } from "lucide-react";
+
+const ESEMPI = [
+  "Si ritiene possibile l'impugnazione della graduatoria?",
+  "Si può alienare la proprietà di una costruzione separatamente dal suolo?",
+  "Quando il concorrente illegittimamente escluso da una gara ha diritto al risarcimento?",
+];
+
+function Chat() {
+  const params = useSearchParams();
+  const addCronologia = useApp((s) => s.addCronologia);
+
+  const [messaggi, setMessaggi] = useState<MessaggioChat[]>([]);
+  const [streaming, setStreaming] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messaggi, streaming]);
+
+  async function invia(testo: string) {
+    const t = testo.trim();
+    if (!t || loading) return;
+    setInput("");
+    const userMsg: MessaggioChat = { id: uid("m"), ruolo: "utente", contenuto: t, createdAt: oggi() };
+    setMessaggi((m) => [...m, userMsg]);
+    addCronologia({ testo: t, tipo: "Chat" });
+
+    setLoading(true);
+    setStreaming("");
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const full = generaRisposta("risposta_immediata", t);
+    let acc = "";
+    for await (const chunk of streamRisposta(full, ac.signal)) {
+      acc += chunk;
+      setStreaming(acc);
+    }
+    if (!ac.signal.aborted) {
+      setMessaggi((m) => [
+        ...m,
+        { id: uid("m"), ruolo: "assistente", contenuto: acc, createdAt: oggi() },
+      ]);
+    }
+    setStreaming("");
+    setLoading(false);
+  }
+
+  function stop() {
+    abortRef.current?.abort();
+    if (streaming) {
+      setMessaggi((m) => [
+        ...m,
+        { id: uid("m"), ruolo: "assistente", contenuto: streaming, createdAt: oggi() },
+      ]);
+    }
+    setStreaming("");
+    setLoading(false);
+  }
+
+  // Auto-invio da query (?q=)
+  useEffect(() => {
+    const q = params.get("q");
+    if (q && !startedRef.current) {
+      startedRef.current = true;
+      invia(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
+  const vuota = messaggi.length === 0 && !streaming;
+
+  return (
+    <div className="flex h-[calc(100dvh-8rem)] flex-col">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={18} className="text-primary" />
+          <h1 className="text-lg font-semibold">Risposta immediata</h1>
+        </div>
+        <button
+          onClick={() => {
+            stop();
+            setMessaggi([]);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"
+        >
+          <Plus size={16} /> Nuova
+        </button>
+      </div>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto rounded-2xl">
+        {vuota ? (
+          <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center text-center">
+            <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-primary-soft text-primary">
+              <Sparkles size={28} />
+            </div>
+            <h2 className="text-2xl font-bold">
+              Ciao, <span className="text-primary">Demo</span>
+            </h2>
+            <p className="mt-1 text-muted">Come posso aiutarti oggi nella tua ricerca giuridica?</p>
+            <div className="mt-6 w-full space-y-2">
+              {ESEMPI.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => invia(e)}
+                  className="block w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted transition hover:border-primary/40 hover:bg-surface-hover hover:text-foreground"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-3xl space-y-4 px-1 pb-4">
+            {messaggi.map((m) => <Bubble key={m.id} msg={m} />)}
+            {streaming && (
+              <Bubble msg={{ id: "stream", ruolo: "assistente", contenuto: streaming, createdAt: "" }} streaming />
+            )}
+            {loading && !streaming && (
+              <div className="flex gap-1.5 px-2 text-primary">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-primary"
+                    style={{ animation: "pulseDots 1.2s infinite", animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          invia(input);
+        }}
+        className="card mt-3 flex items-end gap-2 p-2.5"
+      >
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              invia(input);
+            }
+          }}
+          rows={1}
+          placeholder="Scrivi la tua domanda giuridica..."
+          className="max-h-40 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-2"
+        />
+        {loading ? (
+          <button
+            type="button"
+            onClick={stop}
+            className="grid h-10 w-10 place-items-center rounded-xl bg-surface-hover text-foreground"
+            aria-label="Ferma"
+          >
+            <Square size={16} />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover disabled:opacity-50"
+            disabled={!input.trim()}
+            aria-label="Invia"
+          >
+            <Send size={16} />
+          </button>
+        )}
+      </form>
+    </div>
+  );
+}
+
+function Bubble({ msg, streaming }: { msg: MessaggioChat; streaming?: boolean }) {
+  if (msg.ruolo === "utente") {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+          {msg.contenuto}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex gap-3">
+      <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary">
+        <Sparkles size={16} />
+      </div>
+      <div className="card max-w-[85%] px-4 py-3">
+        <Markdown>{msg.contenuto}</Markdown>
+        {streaming && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-primary align-middle" />}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <Chat />
+    </Suspense>
+  );
+}
