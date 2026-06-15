@@ -53,6 +53,7 @@ export interface Documento {
   nome: string;
   estensione: string; // pdf, docx, txt
   causaId?: string;
+  storagePath?: string; // percorso nel bucket Supabase Storage
   createdAt: string;
 }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
+import { useUser } from "@/lib/auth/useUser";
 import { formatData } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import {
@@ -28,6 +29,8 @@ export default function DashboardPage() {
   const clienti = useApp((s) => s.clienti);
   const cronologia = useApp((s) => s.cronologia);
   const preferiti = useApp((s) => s.preferiti);
+  const { user } = useUser();
+  const saluto = user?.nome || "Avvocato";
 
   const causeAttive = clienti.reduce(
     (acc, c) =>
@@ -57,7 +60,7 @@ export default function DashboardPage() {
           <Sparkles size={30} />
         </div>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Ciao, <span className="text-primary">Demo</span>
+          Ciao, <span className="text-primary">{saluto}</span>
         </h1>
         <p className="mt-2 text-lg text-muted">
           Come posso aiutarti oggi nella tua ricerca giuridica?

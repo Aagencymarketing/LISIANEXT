@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
+import { useUser } from "@/lib/auth/useUser";
 import { generaRisposta, streamRisposta } from "@/lib/ai/mock";
 import { Markdown } from "@/components/Markdown";
 import { uid, oggi } from "@/lib/utils";
@@ -18,6 +19,8 @@ const ESEMPI = [
 function Chat() {
   const params = useSearchParams();
   const addCronologia = useApp((s) => s.addCronologia);
+  const { user } = useUser();
+  const saluto = user?.nome || "Avvocato";
 
   const [messaggi, setMessaggi] = useState<MessaggioChat[]>([]);
   const [streaming, setStreaming] = useState("");
@@ -108,7 +111,7 @@ function Chat() {
               <Sparkles size={28} />
             </div>
             <h2 className="text-2xl font-bold">
-              Ciao, <span className="text-primary">Demo</span>
+              Ciao, <span className="text-primary">{saluto}</span>
             </h2>
             <p className="mt-1 text-muted">Come posso aiutarti oggi nella tua ricerca giuridica?</p>
             <div className="mt-6 w-full space-y-2">

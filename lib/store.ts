@@ -10,25 +10,41 @@ import type {
   ConversazioneAI,
   VoceCronologia,
 } from "./types";
-import { CLIENTI_SEED, CRONOLOGIA_SEED, CONVERSAZIONI_SEED } from "./seed";
-import { uid, oggi } from "./utils";
+import { CLIENTI_SEED } from "./seed";
+import { uuid, oggi } from "./utils";
+import * as gdb from "./db/gestionale";
+import { caricaCronologia, insertCronologia } from "./db/cronologia";
+import { caricaPreferiti, addPreferitoDb, removePreferitoDb } from "./db/preferiti";
 
 type Theme = "light" | "dark";
 
+// Esegue una scrittura su Supabase senza bloccare la UI (ottimistica).
+function persistWrite(p: Promise<unknown>) {
+  p.catch((e) => console.error("[supabase]", e));
+}
+
 interface AppState {
-  // ---- dati (DB gestionale locale) ----
+  // ---- dati (DB gestionale su Supabase, cache locale) ----
   clienti: Cliente[];
   conversazioni: ConversazioneAI[];
   cronologia: VoceCronologia[];
   preferiti: string[];
+  dataLoaded: boolean;
 
-  // ---- UI ----
+  // ---- UI (persistite in localStorage) ----
   theme: Theme;
   sidebarCollapsed: boolean;
   hasHydrated: boolean;
 
+  // ---- sincronizzazione ----
+  hydrateFromSupabase: () => Promise<void>;
+  clearLocal: () => void;
+  caricaEsempi: () => Promise<void>;
+
   // ---- azioni clienti ----
-  addCliente: (c: Omit<Cliente, "id" | "createdAt" | "cause" | "attivita" | "documenti">) => string;
+  addCliente: (
+    c: Omit<Cliente, "id" | "createdAt" | "cause" | "attivita" | "documenti">,
+  ) => string;
   updateCliente: (id: string, patch: Partial<Cliente>) => void;
   removeCliente: (id: string) => void;
   getCliente: (id: string) => Cliente | undefined;
@@ -38,12 +54,16 @@ interface AppState {
   updateCausa: (clienteId: string, causaId: string, patch: Partial<Causa>) => void;
   removeCausa: (clienteId: string, causaId: string) => void;
 
-  // ---- attività (storico) ----
+  // ---- attività ----
   addAttivita: (clienteId: string, a: Omit<Attivita, "id">) => void;
   removeAttivita: (clienteId: string, attivitaId: string) => void;
 
   // ---- documenti ----
-  addDocumento: (clienteId: string, d: Omit<Documento, "id" | "createdAt">) => void;
+  addDocumento: (
+    clienteId: string,
+    d: Omit<Documento, "id" | "createdAt">,
+    storagePath?: string,
+  ) => void;
   removeDocumento: (clienteId: string, docId: string) => void;
 
   // ---- AI / cronologia ----
@@ -56,7 +76,6 @@ interface AppState {
   toggleTheme: () => void;
   toggleSidebar: () => void;
   setHasHydrated: (v: boolean) => void;
-  resetDemo: () => void;
 }
 
 function mutaCliente(
@@ -70,17 +89,67 @@ function mutaCliente(
 export const useApp = create<AppState>()(
   persist(
     (set, get) => ({
-      clienti: CLIENTI_SEED,
-      conversazioni: CONVERSAZIONI_SEED,
-      cronologia: CRONOLOGIA_SEED,
+      clienti: [],
+      conversazioni: [],
+      cronologia: [],
       preferiti: [],
+      dataLoaded: false,
 
       theme: "light",
       sidebarCollapsed: false,
       hasHydrated: false,
 
+      hydrateFromSupabase: async () => {
+        try {
+          const [clienti, cronologia, preferiti] = await Promise.all([
+            gdb.caricaClienti(),
+            caricaCronologia(),
+            caricaPreferiti(),
+          ]);
+          set({ clienti, cronologia, preferiti, dataLoaded: true });
+        } catch (e) {
+          console.error("[supabase] hydrate", e);
+          set({ dataLoaded: true });
+        }
+      },
+
+      clearLocal: () =>
+        set({ clienti: [], conversazioni: [], cronologia: [], preferiti: [], dataLoaded: false }),
+
+      caricaEsempi: async () => {
+        for (const seed of CLIENTI_SEED) {
+          const clienteId = uuid();
+          const causaMap = new Map<string, string>();
+          const cause: Causa[] = seed.cause.map((c) => {
+            const nid = uuid();
+            causaMap.set(c.id, nid);
+            return { ...c, id: nid };
+          });
+          const attivita: Attivita[] = seed.attivita.map((a) => ({
+            ...a,
+            id: uuid(),
+            causaId: a.causaId ? causaMap.get(a.causaId) : undefined,
+          }));
+          const documenti: Documento[] = seed.documenti.map((d) => ({
+            ...d,
+            id: uuid(),
+            causaId: d.causaId ? causaMap.get(d.causaId) : undefined,
+          }));
+          const cliente: Cliente = { ...seed, id: clienteId, cause, attivita, documenti };
+          set((s) => ({ clienti: [cliente, ...s.clienti] }));
+          try {
+            await gdb.insertCliente(cliente);
+            for (const c of cause) await gdb.insertCausa(clienteId, c);
+            for (const a of attivita) await gdb.insertAttivita(clienteId, a);
+            for (const d of documenti) await gdb.insertDocumento(clienteId, d);
+          } catch (e) {
+            console.error("[supabase] esempi", e);
+          }
+        }
+      },
+
       addCliente: (c) => {
-        const id = uid("cli");
+        const id = uuid();
         const nuovo: Cliente = {
           ...c,
           id,
@@ -90,132 +159,134 @@ export const useApp = create<AppState>()(
           documenti: [],
         };
         set((s) => ({ clienti: [nuovo, ...s.clienti] }));
+        persistWrite(gdb.insertCliente(nuovo));
         return id;
       },
 
-      updateCliente: (id, patch) =>
-        set((s) => ({
-          clienti: mutaCliente(s.clienti, id, (c) => ({ ...c, ...patch })),
-        })),
+      updateCliente: (id, patch) => {
+        set((s) => ({ clienti: mutaCliente(s.clienti, id, (c) => ({ ...c, ...patch })) }));
+        persistWrite(gdb.updateClienteDb(id, patch));
+      },
 
-      removeCliente: (id) =>
-        set((s) => ({ clienti: s.clienti.filter((c) => c.id !== id) })),
+      removeCliente: (id) => {
+        set((s) => ({ clienti: s.clienti.filter((c) => c.id !== id) }));
+        persistWrite(gdb.deleteClienteDb(id));
+      },
 
       getCliente: (id) => get().clienti.find((c) => c.id === id),
 
       addCausa: (clienteId, c) => {
-        const id = uid("cau");
+        const id = uuid();
         const nuova: Causa = { ...c, id, createdAt: oggi() };
+        const att: Attivita = {
+          id: uuid(),
+          causaId: id,
+          data: oggi(),
+          tipo: "incarico",
+          titolo: "Nuova pratica creata",
+          descrizione: c.oggetto,
+        };
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
             cause: [nuova, ...cl.cause],
-            attivita: [
-              {
-                id: uid("att"),
-                causaId: id,
-                data: oggi(),
-                tipo: "incarico",
-                titolo: "Nuova pratica creata",
-                descrizione: c.oggetto,
-              },
-              ...cl.attivita,
-            ],
+            attivita: [att, ...cl.attivita],
           })),
         }));
+        persistWrite(gdb.insertCausa(clienteId, nuova));
+        persistWrite(gdb.insertAttivita(clienteId, att));
         return id;
       },
 
-      updateCausa: (clienteId, causaId, patch) =>
+      updateCausa: (clienteId, causaId, patch) => {
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
-            cause: cl.cause.map((ca) =>
-              ca.id === causaId ? { ...ca, ...patch } : ca,
-            ),
+            cause: cl.cause.map((ca) => (ca.id === causaId ? { ...ca, ...patch } : ca)),
           })),
-        })),
+        }));
+        persistWrite(gdb.updateCausaDb(causaId, patch));
+      },
 
-      removeCausa: (clienteId, causaId) =>
+      removeCausa: (clienteId, causaId) => {
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
             cause: cl.cause.filter((ca) => ca.id !== causaId),
             attivita: cl.attivita.filter((a) => a.causaId !== causaId),
           })),
-        })),
+        }));
+        persistWrite(gdb.deleteCausaDb(causaId));
+      },
 
-      addAttivita: (clienteId, a) =>
+      addAttivita: (clienteId, a) => {
+        const nuova: Attivita = { ...a, id: uuid() };
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
-            attivita: [{ ...a, id: uid("att") }, ...cl.attivita],
+            attivita: [nuova, ...cl.attivita],
           })),
-        })),
+        }));
+        persistWrite(gdb.insertAttivita(clienteId, nuova));
+      },
 
-      removeAttivita: (clienteId, attivitaId) =>
+      removeAttivita: (clienteId, attivitaId) => {
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
             attivita: cl.attivita.filter((a) => a.id !== attivitaId),
           })),
-        })),
+        }));
+        persistWrite(gdb.deleteAttivitaDb(attivitaId));
+      },
 
-      addDocumento: (clienteId, d) =>
+      addDocumento: (clienteId, d, storagePath) => {
+        const nuovo: Documento = { ...d, id: uuid(), createdAt: oggi(), storagePath };
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
-            documenti: [{ ...d, id: uid("doc"), createdAt: oggi() }, ...cl.documenti],
+            documenti: [nuovo, ...cl.documenti],
           })),
-        })),
+        }));
+        persistWrite(gdb.insertDocumento(clienteId, nuovo));
+      },
 
-      removeDocumento: (clienteId, docId) =>
+      removeDocumento: (clienteId, docId) => {
         set((s) => ({
           clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
             ...cl,
             documenti: cl.documenti.filter((dd) => dd.id !== docId),
           })),
-        })),
+        }));
+        persistWrite(gdb.deleteDocumentoDb(docId));
+      },
 
       addConversazione: (c) =>
         set((s) => ({ conversazioni: [c, ...s.conversazioni] })),
 
-      addCronologia: (v) =>
-        set((s) => ({
-          cronologia: [
-            { ...v, id: uid("cr"), createdAt: oggi() },
-            ...s.cronologia,
-          ].slice(0, 100),
-        })),
+      addCronologia: (v) => {
+        const nuova: VoceCronologia = { ...v, id: uuid(), createdAt: oggi() };
+        set((s) => ({ cronologia: [nuova, ...s.cronologia].slice(0, 100) }));
+        persistWrite(insertCronologia(nuova));
+      },
 
-      togglePreferito: (id) =>
+      togglePreferito: (id) => {
+        const presente = get().preferiti.includes(id);
         set((s) => ({
-          preferiti: s.preferiti.includes(id)
-            ? s.preferiti.filter((p) => p !== id)
-            : [id, ...s.preferiti],
-        })),
+          preferiti: presente ? s.preferiti.filter((p) => p !== id) : [id, ...s.preferiti],
+        }));
+        persistWrite(presente ? removePreferitoDb(id) : addPreferitoDb(id));
+      },
 
       setTheme: (t) => set({ theme: t }),
       toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setHasHydrated: (v) => set({ hasHydrated: v }),
-
-      resetDemo: () =>
-        set({
-          clienti: CLIENTI_SEED,
-          conversazioni: CONVERSAZIONI_SEED,
-          cronologia: CRONOLOGIA_SEED,
-          preferiti: [],
-        }),
     }),
     {
-      name: "lisianext-demo",
+      name: "lisianext-ui",
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
-        clienti: s.clienti,
-        conversazioni: s.conversazioni,
-        cronologia: s.cronologia,
-        preferiti: s.preferiti,
         theme: s.theme,
         sidebarCollapsed: s.sidebarCollapsed,
       }),

@@ -8,7 +8,7 @@ import { Sun, Moon, RotateCcw, User, Database } from "lucide-react";
 export default function ImpostazioniPage() {
   const theme = useApp((s) => s.theme);
   const setTheme = useApp((s) => s.setTheme);
-  const resetDemo = useApp((s) => s.resetDemo);
+  const caricaEsempi = useApp((s) => s.caricaEsempi);
   const [confirm, setConfirm] = useState(false);
 
   return (
@@ -51,14 +51,14 @@ export default function ImpostazioniPage() {
         <section className="card p-5">
           <div className="flex items-center gap-2">
             <Database size={17} className="text-primary" />
-            <h3 className="font-semibold">Dati dimostrativi</h3>
+            <h3 className="font-semibold">Dati di esempio</h3>
           </div>
           <p className="mt-2 text-sm text-muted">
-            I dati del gestionale sono salvati localmente nel browser per la demo. Puoi ripristinare i dati
-            di esempio in qualsiasi momento.
+            Puoi popolare il tuo account con alcuni clienti e pratiche di esempio per esplorare la
+            piattaforma. Verranno salvati nel tuo database.
           </p>
           <Button variant="secondary" className="mt-4" onClick={() => setConfirm(true)}>
-            <RotateCcw size={16} /> Ripristina dati demo
+            <RotateCcw size={16} /> Carica dati di esempio
           </Button>
         </section>
       </div>
@@ -66,17 +66,17 @@ export default function ImpostazioniPage() {
       <Modal
         open={confirm}
         onClose={() => setConfirm(false)}
-        title="Ripristina dati demo"
+        title="Carica dati di esempio"
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirm(false)}>Annulla</Button>
-            <Button variant="danger" onClick={() => { resetDemo(); setConfirm(false); }}>Ripristina</Button>
+            <Button onClick={() => { caricaEsempi(); setConfirm(false); }}>Carica</Button>
           </>
         }
       >
         <p className="text-sm text-muted">
-          Verranno ripristinati clienti, pratiche, cronologia e preferiti di esempio. Le modifiche fatte durante
-          la demo andranno perse.
+          Verranno aggiunti al tuo account alcuni clienti e pratiche di esempio. Potrai modificarli o
+          eliminarli come qualsiasi altro dato.
         </p>
       </Modal>
     </div>

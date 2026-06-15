@@ -17,11 +17,13 @@ import {
   Gavel,
   CalendarClock,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export default function GestionalePage() {
   const router = useRouter();
   const clienti = useApp((s) => s.clienti);
+  const dataLoaded = useApp((s) => s.dataLoaded);
   const addCliente = useApp((s) => s.addCliente);
 
   const [q, setQ] = useState("");
@@ -91,7 +93,11 @@ export default function GestionalePage() {
         />
       </div>
 
-      {filtrati.length === 0 ? (
+      {!dataLoaded ? (
+        <div className="flex items-center justify-center gap-2 py-20 text-muted">
+          <Loader2 size={20} className="animate-spin" /> Caricamento clienti...
+        </div>
+      ) : filtrati.length === 0 ? (
         <EmptyState
           icon={<Briefcase size={26} />}
           title={q ? "Nessun cliente trovato" : "Nessun cliente"}

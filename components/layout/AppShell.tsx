@@ -10,6 +10,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useApp((s) => s.theme);
   const hydrated = useApp((s) => s.hasHydrated);
+  const hydrateFromSupabase = useApp((s) => s.hydrateFromSupabase);
 
   // Applica la classe .dark su <html>
   useEffect(() => {
@@ -17,6 +18,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.classList.toggle("dark", theme === "dark");
   }, [theme, hydrated]);
+
+  // Carica i dati del gestionale da Supabase all'avvio (utente autenticato)
+  useEffect(() => {
+    hydrateFromSupabase();
+  }, [hydrateFromSupabase]);
 
   return (
     <div className="flex h-dvh overflow-hidden">

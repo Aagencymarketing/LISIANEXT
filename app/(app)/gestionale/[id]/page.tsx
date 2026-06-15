@@ -6,12 +6,18 @@ import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { nomeCliente, inizialiCliente } from "@/lib/types";
 import { STATO_CAUSA, MATERIA_CAUSA, TIPO_ATTIVITA } from "@/lib/labels";
-import { formatData, formatEuro, oggi } from "@/lib/utils";
-import { Badge, Button, Modal, EmptyState, Input, Select } from "@/components/ui";
+import { formatData, formatEuro } from "@/lib/utils";
+import { Badge, Button, Modal, EmptyState, Select } from "@/components/ui";
 import { ClienteForm, type ClienteDraft } from "@/components/gestionale/ClienteForm";
 import { CausaForm, type CausaDraft } from "@/components/gestionale/CausaForm";
 import { AttivitaForm, type AttivitaDraft } from "@/components/gestionale/AttivitaForm";
 import { ClienteAI } from "@/components/gestionale/ClienteAI";
+import { useUser } from "@/lib/auth/useUser";
+import {
+  uploadDocumento,
+  signedUrlDocumento,
+  deleteStorageObject,
+} from "@/lib/db/storage";
 import {
   ArrowLeft,
   Mail,
@@ -26,6 +32,7 @@ import {
   FileText,
   Euro,
   Download,
+  Loader2,
 } from "lucide-react";
 
 type Tab = "panoramica" | "pratiche" | "storico" | "documenti";
@@ -35,6 +42,7 @@ export default function ClienteDetailPage() {
   const { id } = useParams<{ id: string }>();
 
   const clienti = useApp((s) => s.clienti);
+  const dataLoaded = useApp((s) => s.dataLoaded);
   const updateCliente = useApp((s) => s.updateCliente);
   const removeCliente = useApp((s) => s.removeCliente);
   const addCausa = useApp((s) => s.addCausa);
@@ -61,8 +69,10 @@ export default function ClienteDetailPage() {
   const [causaValido, setCausaValido] = useState(false);
   const [attDraft, setAttDraft] = useState<AttivitaDraft | null>(null);
   const [attValido, setAttValido] = useState(false);
-  const [docNome, setDocNome] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
   const [docCausa, setDocCausa] = useState("");
+  const [docUploading, setDocUploading] = useState(false);
+  const { user } = useUser();
 
   const storicoOrdinato = useMemo(
     () =>
@@ -71,6 +81,14 @@ export default function ClienteDetailPage() {
         : [],
     [cliente],
   );
+
+  if (!cliente && !dataLoaded) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-20 text-muted">
+        <Loader2 size={20} className="animate-spin" /> Caricamento...
+      </div>
+    );
+  }
 
   if (!cliente) {
     return (
@@ -116,15 +134,45 @@ export default function ClienteDetailPage() {
     setAttOpen(false);
     setTab("storico");
   };
-  const salvaDoc = () => {
-    if (!docNome.trim()) return;
-    const parts = docNome.trim().split(".");
-    const est = parts.length > 1 ? parts.pop()! : "pdf";
-    addDocumento(cliente.id, { nome: parts.join("."), estensione: est, causaId: docCausa || undefined });
-    setDocNome("");
-    setDocCausa("");
-    setDocOpen(false);
-    setTab("documenti");
+  const salvaDoc = async () => {
+    if (!docFile || !user) return;
+    setDocUploading(true);
+    try {
+      const { storagePath, nome, estensione } = await uploadDocumento(
+        docFile,
+        user.id,
+        cliente.id,
+      );
+      addDocumento(
+        cliente.id,
+        { nome, estensione, causaId: docCausa || undefined },
+        storagePath,
+      );
+      setDocFile(null);
+      setDocCausa("");
+      setDocOpen(false);
+      setTab("documenti");
+    } catch (e) {
+      console.error("[upload]", e);
+      alert("Caricamento non riuscito. Riprova.");
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const scaricaDoc = async (storagePath?: string) => {
+    if (!storagePath) return;
+    try {
+      const url = await signedUrlDocumento(storagePath);
+      window.open(url, "_blank");
+    } catch (e) {
+      console.error("[download]", e);
+    }
+  };
+
+  const eliminaDoc = (docId: string, storagePath?: string) => {
+    if (storagePath) deleteStorageObject(storagePath).catch(() => {});
+    removeDocumento(cliente.id, docId);
   };
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
@@ -322,8 +370,8 @@ export default function ClienteDetailPage() {
                     {d.causaId && cliente.cause.find((c) => c.id === d.causaId) && ` · ${cliente.cause.find((c) => c.id === d.causaId)!.oggetto}`}
                   </p>
                 </div>
-                <button className="rounded-lg p-2 text-muted-2 hover:text-foreground" aria-label="Scarica"><Download size={16} /></button>
-                <button onClick={() => removeDocumento(cliente.id, d.id)} className="rounded-lg p-2 text-muted-2 hover:text-danger" aria-label="Elimina"><Trash2 size={16} /></button>
+                <button onClick={() => scaricaDoc(d.storagePath)} disabled={!d.storagePath} className="rounded-lg p-2 text-muted-2 hover:text-foreground disabled:opacity-40" aria-label="Scarica"><Download size={16} /></button>
+                <button onClick={() => eliminaDoc(d.id, d.storagePath)} className="rounded-lg p-2 text-muted-2 hover:text-danger" aria-label="Elimina"><Trash2 size={16} /></button>
               </div>
             ))
           )}
@@ -355,16 +403,32 @@ export default function ClienteDetailPage() {
       </Modal>
 
       <Modal open={docOpen} onClose={() => setDocOpen(false)} title="Aggiungi documento"
-        footer={<><Button variant="secondary" onClick={() => setDocOpen(false)}>Annulla</Button><Button onClick={salvaDoc} disabled={!docNome.trim()}>Aggiungi</Button></>}>
+        footer={<><Button variant="secondary" onClick={() => setDocOpen(false)} disabled={docUploading}>Annulla</Button><Button onClick={salvaDoc} disabled={!docFile || docUploading}>{docUploading ? <><Loader2 size={16} className="animate-spin" /> Caricamento...</> : "Carica"}</Button></>}>
         <div className="space-y-4">
-          <Input value={docNome} onChange={(e) => setDocNome(e.target.value)} placeholder="Nome file, es. Contratto_locazione.pdf" />
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-2 px-6 py-8 text-center hover:bg-surface-hover">
+            <FileText size={22} className="text-primary" />
+            {docFile ? (
+              <span className="text-sm font-medium">{docFile.name}</span>
+            ) : (
+              <>
+                <span className="text-sm font-medium">Scegli un file da caricare</span>
+                <span className="text-xs text-muted-2">PDF, DOCX, TXT, immagini…</span>
+              </>
+            )}
+            <input
+              type="file"
+              className="hidden"
+              accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg"
+              onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
           {cliente.cause.length > 0 && (
             <Select value={docCausa} onChange={(e) => setDocCausa(e.target.value)}>
               <option value="">Nessuna pratica collegata</option>
               {cliente.cause.map((c) => <option key={c.id} value={c.id}>{c.oggetto}</option>)}
             </Select>
           )}
-          <p className="text-xs text-muted-2">Nella demo il file non viene caricato: si registra solo il riferimento.</p>
+          <p className="text-xs text-muted-2">Il file viene caricato in modo sicuro e privato sul tuo spazio Storage.</p>
         </div>
       </Modal>
     </div>
