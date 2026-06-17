@@ -105,11 +105,9 @@ function Chat() {
         contenuto: streaming,
         createdAt: oggi(),
       };
-      setMessaggi((m) => {
-        const completi = [...m, assistMsg];
-        persisti(completi, completi[0]?.contenuto || streaming.slice(0, 90));
-        return completi;
-      });
+      const completi = [...messaggi, assistMsg];
+      setMessaggi(completi);
+      persisti(completi, completi[0]?.contenuto || streaming.slice(0, 90));
     }
     setStreaming("");
     setLoading(false);
