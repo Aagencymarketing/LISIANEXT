@@ -108,18 +108,23 @@ export const useApp = create<AppState>()(
       hasHydrated: false,
 
       hydrateFromSupabase: async () => {
-        try {
-          const [clienti, cronologia, preferiti, conversazioni] = await Promise.all([
-            gdb.caricaClienti(),
-            caricaCronologia(),
-            caricaPreferiti(),
-            caricaConversazioni(),
-          ]);
-          set({ clienti, cronologia, preferiti, conversazioni, dataLoaded: true });
-        } catch (e) {
-          console.error("[supabase] hydrate", e);
-          set({ dataLoaded: true });
-        }
+        // Ogni risorsa è caricata in modo indipendente: il fallimento di una
+        // (es. tabella non ancora migrata) non blocca le altre.
+        const safe = async <T,>(p: Promise<T>, fallback: T): Promise<T> => {
+          try {
+            return await p;
+          } catch (e) {
+            console.error("[supabase] hydrate", e);
+            return fallback;
+          }
+        };
+        const [clienti, cronologia, preferiti, conversazioni] = await Promise.all([
+          safe(gdb.caricaClienti(), [] as Cliente[]),
+          safe(caricaCronologia(), [] as VoceCronologia[]),
+          safe(caricaPreferiti(), [] as string[]),
+          safe(caricaConversazioni(), [] as ConversazioneAI[]),
+        ]);
+        set({ clienti, cronologia, preferiti, conversazioni, dataLoaded: true });
       },
 
       clearLocal: () =>
