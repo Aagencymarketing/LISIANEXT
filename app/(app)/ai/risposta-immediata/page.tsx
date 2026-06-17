@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { useUser } from "@/lib/auth/useUser";
-import { generaRisposta, streamRisposta } from "@/lib/ai/mock";
+import { streamAI } from "@/lib/ai/client";
 import { Markdown } from "@/components/Markdown";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
@@ -78,11 +78,21 @@ function Chat() {
     setStreaming("");
     const ac = new AbortController();
     abortRef.current = ac;
-    const full = generaRisposta("risposta_immediata", t);
+    const cliente = clienti.find((c) => c.id === clienteId);
     let acc = "";
-    for await (const chunk of streamRisposta(full, ac.signal)) {
-      acc += chunk;
-      setStreaming(acc);
+    try {
+      acc = await streamAI(
+        "risposta_immediata",
+        t,
+        cliente ? { cliente } : undefined,
+        (parziale) => setStreaming(parziale),
+        ac.signal,
+      );
+    } catch (e) {
+      if (!ac.signal.aborted) {
+        const msg = e instanceof Error ? e.message : "Errore imprevisto";
+        acc = `> ⚠️ ${msg}`;
+      }
     }
     if (!ac.signal.aborted) {
       const assistMsg: MessaggioChat = {

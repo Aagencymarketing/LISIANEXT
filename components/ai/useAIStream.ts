@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { generaRisposta, streamRisposta, type ContestoAI } from "@/lib/ai/mock";
+import { type ContestoAI } from "@/lib/ai/mock";
+import { streamAI } from "@/lib/ai/client";
 import type { ModuloAI } from "@/lib/types";
 
 export function useAIStream(modulo: ModuloAI) {
@@ -16,11 +17,16 @@ export function useAIStream(modulo: ModuloAI) {
       abortRef.current = ac;
       setLoading(true);
       setOutput("");
-      const full = generaRisposta(modulo, prompt, ctx);
       let acc = "";
-      for await (const chunk of streamRisposta(full, ac.signal)) {
-        acc += chunk;
-        setOutput(acc);
+      try {
+        acc = await streamAI(modulo, prompt, ctx, (parziale) => setOutput(parziale), ac.signal);
+      } catch (e) {
+        if (ac.signal.aborted) return null;
+        const msg = e instanceof Error ? e.message : "Errore imprevisto";
+        const testo = `\n\n> ⚠️ ${msg}`;
+        setOutput((o) => o + testo);
+        setLoading(false);
+        return null;
       }
       if (ac.signal.aborted) return null;
       setLoading(false);
