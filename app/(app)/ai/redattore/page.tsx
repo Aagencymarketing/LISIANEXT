@@ -10,24 +10,24 @@ import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { Markdown } from "@/components/Markdown";
 import { Button, Field, Textarea, Select } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
+import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
-import type { ConversazioneAI } from "@/lib/types";
-import { PenLine, Sparkles, Square, Save, Check, Copy, Plus } from "lucide-react";
+import { PenLine, Sparkles, Square, Check, Copy, Plus, PanelRight, User } from "lucide-react";
 
 function Redattore() {
   const params = useSearchParams();
   const clienti = useApp((s) => s.clienti);
   const addCronologia = useApp((s) => s.addCronologia);
-  const addAttivita = useApp((s) => s.addAttivita);
   const addConversazione = useApp((s) => s.addConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
+  const aiPanelOpen = useApp((s) => s.aiPanelOpen);
+  const toggleAiPanel = useApp((s) => s.toggleAiPanel);
 
   const [tipoAtto, setTipoAtto] = useState<string>(TIPI_ATTO[0]);
   const [oggetto, setOggetto] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [clienteId, setClienteId] = useState<string | undefined>(params.get("cliente") || undefined);
   const [causaId, setCausaId] = useState<string | undefined>(params.get("causa") || undefined);
-  const [salvato, setSalvato] = useState(false);
   const [copiato, setCopiato] = useState(false);
   const [convId, setConvId] = useState<string>();
 
@@ -35,6 +35,16 @@ function Redattore() {
 
   const cliente = clienti.find((c) => c.id === clienteId);
   const causa = cliente?.cause.find((c) => c.id === causaId);
+
+  const setCliente = (id?: string) => {
+    setClienteId(id);
+    setCausaId(undefined);
+    if (convId) updateConversazione(convId, { clienteId: id, causaId: undefined });
+  };
+  const setCausa = (id?: string) => {
+    setCausaId(id);
+    if (convId) updateConversazione(convId, { causaId: id });
+  };
 
   // Prefill oggetto se arriva da una pratica
   useEffect(() => {
@@ -48,7 +58,6 @@ function Redattore() {
 
   const genera = async () => {
     if (!oggetto.trim()) return;
-    setSalvato(false);
     setConvId(undefined);
     addCronologia({ testo: `${tipoAtto} — ${oggetto.slice(0, 80)}`, tipo: "Atto" });
     const testo = await run(oggetto, { cliente, causa, tipoAtto });
@@ -72,19 +81,6 @@ function Redattore() {
     }
   };
 
-  const salvaNelCliente = () => {
-    if (!clienteId) return;
-    addAttivita(clienteId, {
-      data: oggi(),
-      causaId,
-      tipo: "atto",
-      titolo: `Bozza atto: ${tipoAtto}`,
-      descrizione: oggetto.slice(0, 140),
-    });
-    if (convId) updateConversazione(convId, { clienteId, causaId });
-    setSalvato(true);
-  };
-
   const copia = async () => {
     await navigator.clipboard?.writeText(output);
     setCopiato(true);
@@ -98,7 +94,6 @@ function Redattore() {
     setClienteId(undefined);
     setCausaId(undefined);
     setConvId(undefined);
-    setSalvato(false);
   };
 
   const apri = (c: ConversazioneAI) => {
@@ -109,7 +104,6 @@ function Redattore() {
     setClienteId(c.clienteId);
     setCausaId(c.causaId);
     setConvId(c.id);
-    setSalvato(false);
   };
 
   return (
@@ -127,9 +121,19 @@ function Redattore() {
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">Tipo di atto</span>
-              <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
-                <Plus size={14} /> Nuova
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
+                  <Plus size={14} /> Nuova
+                </button>
+                <button
+                  onClick={toggleAiPanel}
+                  className="hidden rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground xl:inline-flex"
+                  aria-label={aiPanelOpen ? "Chiudi bozze" : "Apri bozze"}
+                  title={aiPanelOpen ? "Nascondi bozze salvate" : "Mostra bozze salvate"}
+                >
+                  <PanelRight size={16} />
+                </button>
+              </div>
             </div>
             <Select value={tipoAtto} onChange={(e) => setTipoAtto(e.target.value)}>
               {TIPI_ATTO.map((t) => (
@@ -159,8 +163,8 @@ function Redattore() {
               <ContextPicker
                 clienteId={clienteId}
                 causaId={causaId}
-                onCliente={setClienteId}
-                onCausa={setCausaId}
+                onCliente={setCliente}
+                onCausa={setCausa}
               />
             </div>
 
@@ -185,35 +189,37 @@ function Redattore() {
               {!loading && (
                 <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
                   <span className="inline-flex items-center gap-1.5 text-xs text-success">
-                    <Check size={14} /> Salvato automaticamente
+                    <Check size={14} /> Salvato in Bozze
                   </span>
-                  <Button variant="secondary" onClick={copia}>
+                  {cliente && (
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-primary-soft px-2 py-1 text-xs text-primary">
+                      <User size={13} /> Collegato a {nomeCliente(cliente)} · visibile nello storico
+                    </span>
+                  )}
+                  <Button variant="secondary" size="sm" onClick={copia}>
                     {copiato ? <Check size={16} /> : <Copy size={16} />}
                     {copiato ? "Copiato" : "Copia testo"}
                   </Button>
-                  {clienteId && (
-                    <Button variant="soft" onClick={salvaNelCliente} disabled={salvato}>
-                      {salvato ? <Check size={16} /> : <Save size={16} />}
-                      {salvato ? "Aggiunto allo storico" : "Aggiungi allo storico del cliente"}
-                    </Button>
-                  )}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <aside className="hidden w-72 shrink-0 xl:block">
-          <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
-            <ConversazioniPanel
-              modulo="redattore"
-              titolo="Bozze"
-              attivoId={convId}
-              onApri={apri}
-              onNuova={nuovo}
-            />
-          </div>
-        </aside>
+        {aiPanelOpen && (
+          <aside className="hidden w-72 shrink-0 xl:block">
+            <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
+              <ConversazioniPanel
+                modulo="redattore"
+                titolo="Bozze fatte"
+                attivoId={convId}
+                onApri={apri}
+                onNuova={nuovo}
+                onClose={toggleAiPanel}
+              />
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import { Markdown } from "@/components/Markdown";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
-import { Sparkles, Send, Plus, Square, MessageSquare, Link2 } from "lucide-react";
+import { Sparkles, Send, Plus, Square, MessageSquare, Link2, PanelRight } from "lucide-react";
 
 const ESEMPI = [
   "Si ritiene possibile l'impugnazione della graduatoria?",
@@ -23,6 +23,8 @@ function Chat() {
   const addConversazione = useApp((s) => s.addConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
   const clienti = useApp((s) => s.clienti);
+  const aiPanelOpen = useApp((s) => s.aiPanelOpen);
+  const toggleAiPanel = useApp((s) => s.toggleAiPanel);
   const { user } = useUser();
   const saluto = user?.nome || "Avvocato";
 
@@ -180,6 +182,14 @@ function Chat() {
             >
               <Plus size={16} /> Nuova
             </button>
+            <button
+              onClick={toggleAiPanel}
+              className="hidden rounded-lg p-2 text-muted hover:bg-surface-hover hover:text-foreground lg:inline-flex"
+              aria-label={aiPanelOpen ? "Chiudi conversazioni" : "Apri conversazioni"}
+              title={aiPanelOpen ? "Nascondi conversazioni" : "Mostra conversazioni"}
+            >
+              <PanelRight size={18} />
+            </button>
           </div>
         </div>
 
@@ -269,17 +279,20 @@ function Chat() {
       </div>
 
       {/* Pannello conversazioni salvate */}
-      <aside className="hidden w-72 shrink-0 lg:block">
-        <div className="card h-full p-4">
-          <ConversazioniPanel
-            modulo="risposta_immediata"
-            titolo="Conversazioni"
-            attivoId={convId}
-            onApri={apri}
-            onNuova={nuova}
-          />
-        </div>
-      </aside>
+      {aiPanelOpen && (
+        <aside className="hidden w-72 shrink-0 lg:block">
+          <div className="card h-full p-4">
+            <ConversazioniPanel
+              modulo="risposta_immediata"
+              titolo="Conversazioni"
+              attivoId={convId}
+              onApri={apri}
+              onNuova={nuova}
+              onClose={toggleAiPanel}
+            />
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

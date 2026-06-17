@@ -7,23 +7,23 @@ import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { Markdown } from "@/components/Markdown";
-import { Button, Field, Textarea } from "@/components/ui";
+import { Button, Textarea } from "@/components/ui";
+import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
-import type { ConversazioneAI } from "@/lib/types";
-import { FileSearch, Send, Square, Save, Check, Plus } from "lucide-react";
+import { FileSearch, Send, Square, Check, Plus, PanelRight, User } from "lucide-react";
 
 export default function PareriPage() {
   const clienti = useApp((s) => s.clienti);
   const addCronologia = useApp((s) => s.addCronologia);
-  const addAttivita = useApp((s) => s.addAttivita);
   const addConversazione = useApp((s) => s.addConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
+  const aiPanelOpen = useApp((s) => s.aiPanelOpen);
+  const toggleAiPanel = useApp((s) => s.toggleAiPanel);
 
   const [quesito, setQuesito] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [clienteId, setClienteId] = useState<string>();
   const [causaId, setCausaId] = useState<string>();
-  const [salvato, setSalvato] = useState(false);
   const [convId, setConvId] = useState<string>();
 
   const { output, loading, run, stop, setOutput } = useAIStream("pareri");
@@ -31,9 +31,19 @@ export default function PareriPage() {
   const cliente = clienti.find((c) => c.id === clienteId);
   const causa = cliente?.cause.find((c) => c.id === causaId);
 
+  // Cambia cliente/causa e mantiene sincronizzato il parere già salvato
+  const setCliente = (id?: string) => {
+    setClienteId(id);
+    setCausaId(undefined);
+    if (convId) updateConversazione(convId, { clienteId: id, causaId: undefined });
+  };
+  const setCausa = (id?: string) => {
+    setCausaId(id);
+    if (convId) updateConversazione(convId, { causaId: id });
+  };
+
   const genera = async () => {
     if (!quesito.trim()) return;
-    setSalvato(false);
     setConvId(undefined);
     addCronologia({ testo: quesito.slice(0, 120), tipo: "Parere" });
     const testo = await run(quesito, { cliente, causa });
@@ -57,19 +67,6 @@ export default function PareriPage() {
     }
   };
 
-  const salvaNelCliente = () => {
-    if (!clienteId) return;
-    addAttivita(clienteId, {
-      data: oggi(),
-      causaId,
-      tipo: "atto",
-      titolo: "Parere AI",
-      descrizione: quesito.slice(0, 140),
-    });
-    if (convId) updateConversazione(convId, { clienteId, causaId });
-    setSalvato(true);
-  };
-
   const nuovo = () => {
     setQuesito("");
     setOutput("");
@@ -77,7 +74,6 @@ export default function PareriPage() {
     setClienteId(undefined);
     setCausaId(undefined);
     setConvId(undefined);
-    setSalvato(false);
   };
 
   const apri = (c: ConversazioneAI) => {
@@ -86,7 +82,6 @@ export default function PareriPage() {
     setClienteId(c.clienteId);
     setCausaId(c.causaId);
     setConvId(c.id);
-    setSalvato(false);
   };
 
   return (
@@ -104,9 +99,19 @@ export default function PareriPage() {
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">Quesito giuridico</span>
-              <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
-                <Plus size={14} /> Nuovo
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
+                  <Plus size={14} /> Nuovo
+                </button>
+                <button
+                  onClick={toggleAiPanel}
+                  className="hidden rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground xl:inline-flex"
+                  aria-label={aiPanelOpen ? "Chiudi pareri" : "Apri pareri"}
+                  title={aiPanelOpen ? "Nascondi pareri salvati" : "Mostra pareri salvati"}
+                >
+                  <PanelRight size={16} />
+                </button>
+              </div>
             </div>
             <Textarea
               value={quesito}
@@ -124,8 +129,8 @@ export default function PareriPage() {
               <ContextPicker
                 clienteId={clienteId}
                 causaId={causaId}
-                onCliente={setClienteId}
-                onCausa={setCausaId}
+                onCliente={setCliente}
+                onCausa={setCausa}
               />
             </div>
 
@@ -146,15 +151,14 @@ export default function PareriPage() {
             <div className="card animate-in p-6">
               <Markdown>{output}</Markdown>
               {!loading && (
-                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                  <span className="inline-flex items-center gap-1.5 text-xs text-success">
-                    <Check size={14} /> Salvato automaticamente
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs">
+                  <span className="inline-flex items-center gap-1.5 text-success">
+                    <Check size={14} /> Salvato in Pareri
                   </span>
-                  {clienteId && (
-                    <Button variant="soft" onClick={salvaNelCliente} disabled={salvato}>
-                      {salvato ? <Check size={16} /> : <Save size={16} />}
-                      {salvato ? "Aggiunto allo storico" : "Aggiungi allo storico del cliente"}
-                    </Button>
+                  {cliente && (
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-primary-soft px-2 py-1 text-primary">
+                      <User size={13} /> Collegato a {nomeCliente(cliente)} · visibile nello storico
+                    </span>
                   )}
                 </div>
               )}
@@ -162,17 +166,20 @@ export default function PareriPage() {
           )}
         </div>
 
-        <aside className="hidden w-72 shrink-0 xl:block">
-          <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
-            <ConversazioniPanel
-              modulo="pareri"
-              titolo="Consulenze"
-              attivoId={convId}
-              onApri={apri}
-              onNuova={nuovo}
-            />
-          </div>
-        </aside>
+        {aiPanelOpen && (
+          <aside className="hidden w-72 shrink-0 xl:block">
+            <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
+              <ConversazioniPanel
+                modulo="pareri"
+                titolo="Pareri fatti"
+                attivoId={convId}
+                onApri={apri}
+                onNuova={nuovo}
+                onClose={toggleAiPanel}
+              />
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );

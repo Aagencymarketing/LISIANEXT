@@ -40,6 +40,7 @@ interface AppState {
   // ---- UI (persistite in localStorage) ----
   theme: Theme;
   sidebarCollapsed: boolean;
+  aiPanelOpen: boolean;
   hasHydrated: boolean;
 
   // ---- sincronizzazione ----
@@ -83,6 +84,7 @@ interface AppState {
   setTheme: (t: Theme) => void;
   toggleTheme: () => void;
   toggleSidebar: () => void;
+  toggleAiPanel: () => void;
   setHasHydrated: (v: boolean) => void;
 }
 
@@ -105,6 +107,7 @@ export const useApp = create<AppState>()(
 
       theme: "light",
       sidebarCollapsed: false,
+      aiPanelOpen: true,
       hasHydrated: false,
 
       hydrateFromSupabase: async () => {
@@ -311,6 +314,7 @@ export const useApp = create<AppState>()(
       setTheme: (t) => set({ theme: t }),
       toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      toggleAiPanel: () => set((s) => ({ aiPanelOpen: !s.aiPanelOpen })),
       setHasHydrated: (v) => set({ hasHydrated: v }),
     }),
     {
@@ -319,6 +323,7 @@ export const useApp = create<AppState>()(
       partialize: (s) => ({
         theme: s.theme,
         sidebarCollapsed: s.sidebarCollapsed,
+        aiPanelOpen: s.aiPanelOpen,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

@@ -2,21 +2,30 @@
 
 import { useApp } from "@/lib/store";
 import { nomeCliente, type ConversazioneAI, type ModuloAI } from "@/lib/types";
-import { tempoFa } from "@/lib/utils";
-import { MessageSquare, Trash2, Plus, User } from "lucide-react";
-import { EmptyState } from "@/components/ui";
+import { formatData } from "@/lib/utils";
+import { MessageSquare, Trash2, Plus, User, PanelRightClose } from "lucide-react";
+import { Badge, type Tone } from "@/components/ui";
+
+const TIPO_MODULO: Record<ModuloAI, { label: string; tone: Tone }> = {
+  risposta_immediata: { label: "Risposta", tone: "blue" },
+  pareri: { label: "Parere", tone: "violet" },
+  redattore: { label: "Atto", tone: "amber" },
+  ricerche: { label: "Ricerca", tone: "gray" },
+};
 
 export function ConversazioniPanel({
   modulo,
   attivoId,
   onApri,
   onNuova,
+  onClose,
   titolo = "Salvati",
 }: {
   modulo: ModuloAI;
   attivoId?: string;
   onApri: (c: ConversazioneAI) => void;
   onNuova?: () => void;
+  onClose?: () => void;
   titolo?: string;
 }) {
   const conversazioni = useApp((s) => s.conversazioni);
@@ -24,6 +33,7 @@ export function ConversazioniPanel({
   const removeConversazione = useApp((s) => s.removeConversazione);
 
   const lista = conversazioni.filter((c) => c.modulo === modulo);
+  const meta = TIPO_MODULO[modulo];
 
   return (
     <div className="flex h-full flex-col">
@@ -35,14 +45,25 @@ export function ConversazioniPanel({
             {lista.length}
           </span>
         </h3>
-        {onNuova && (
-          <button
-            onClick={onNuova}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover"
-          >
-            <Plus size={14} /> Nuova
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {onNuova && (
+            <button
+              onClick={onNuova}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover"
+            >
+              <Plus size={14} /> Nuova
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-muted-2 hover:bg-surface-hover hover:text-foreground"
+              aria-label="Chiudi pannello"
+            >
+              <PanelRightClose size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 space-y-1.5 overflow-y-auto">
@@ -65,8 +86,8 @@ export function ConversazioniPanel({
                 }`}
                 onClick={() => onApri(c)}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="line-clamp-2 text-sm font-medium">{c.titolo}</p>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <Badge tone={meta.tone}>{meta.label}</Badge>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -78,8 +99,9 @@ export function ConversazioniPanel({
                     <Trash2 size={14} />
                   </button>
                 </div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-muted-2">
-                  <span>{tempoFa(c.updatedAt)}</span>
+                <p className="line-clamp-2 text-sm font-medium">{c.titolo}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-2">
+                  <span>{formatData(c.updatedAt, true)}</span>
                   {cliente && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-1.5 py-0.5 text-primary">
                       <User size={11} /> {nomeCliente(cliente)}
@@ -92,16 +114,5 @@ export function ConversazioniPanel({
         )}
       </div>
     </div>
-  );
-}
-
-/** Stato vuoto generico (riusato) */
-export function NessunSalvato() {
-  return (
-    <EmptyState
-      icon={<MessageSquare size={24} />}
-      title="Niente di salvato"
-      description="Gli elementi salvati appariranno qui."
-    />
   );
 }

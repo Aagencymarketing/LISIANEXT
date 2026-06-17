@@ -7,7 +7,8 @@ import { useApp } from "@/lib/store";
 import { nomeCliente, inizialiCliente } from "@/lib/types";
 import { STATO_CAUSA, MATERIA_CAUSA, TIPO_ATTIVITA } from "@/lib/labels";
 import { formatData, formatEuro } from "@/lib/utils";
-import { Badge, Button, Modal, EmptyState, Select } from "@/components/ui";
+import { Badge, Button, Modal, EmptyState, Select, type Tone } from "@/components/ui";
+import type { ModuloAI } from "@/lib/types";
 import { ClienteForm, type ClienteDraft } from "@/components/gestionale/ClienteForm";
 import { CausaForm, type CausaDraft } from "@/components/gestionale/CausaForm";
 import { AttivitaForm, type AttivitaDraft } from "@/components/gestionale/AttivitaForm";
@@ -37,6 +38,23 @@ import {
 
 type Tab = "panoramica" | "pratiche" | "storico" | "documenti";
 
+interface TimelineItem {
+  id: string;
+  data: string;
+  badge: { label: string; tone: Tone };
+  titolo: string;
+  descrizione?: string;
+  causaId?: string;
+  kind: "attivita" | "conversazione";
+}
+
+const BADGE_MODULO: Record<ModuloAI, { label: string; tone: Tone }> = {
+  risposta_immediata: { label: "Risposta AI", tone: "blue" },
+  pareri: { label: "Parere AI", tone: "violet" },
+  redattore: { label: "Atto AI", tone: "amber" },
+  ricerche: { label: "Ricerca", tone: "gray" },
+};
+
 export default function ClienteDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -52,6 +70,8 @@ export default function ClienteDetailPage() {
   const removeAttivita = useApp((s) => s.removeAttivita);
   const addDocumento = useApp((s) => s.addDocumento);
   const removeDocumento = useApp((s) => s.removeDocumento);
+  const conversazioni = useApp((s) => s.conversazioni);
+  const removeConversazione = useApp((s) => s.removeConversazione);
 
   const cliente = clienti.find((c) => c.id === id);
 
@@ -74,13 +94,39 @@ export default function ClienteDetailPage() {
   const [docUploading, setDocUploading] = useState(false);
   const { user } = useUser();
 
-  const storicoOrdinato = useMemo(
-    () =>
-      cliente
-        ? [...cliente.attivita].sort((a, b) => +new Date(b.data) - +new Date(a.data))
-        : [],
-    [cliente],
-  );
+  // Storico unificato: attività manuali + elementi AI (chat/pareri/atti) collegati al cliente
+  const storicoOrdinato = useMemo<TimelineItem[]>(() => {
+    if (!cliente) return [];
+    const daAttivita: TimelineItem[] = cliente.attivita.map((a) => ({
+      id: a.id,
+      data: a.data,
+      badge: TIPO_ATTIVITA[a.tipo],
+      titolo: a.titolo,
+      descrizione: a.descrizione,
+      causaId: a.causaId,
+      kind: "attivita",
+    }));
+    const daConversazioni: TimelineItem[] = conversazioni
+      .filter((c) => c.clienteId === cliente.id)
+      .map((c) => ({
+        id: c.id,
+        data: c.updatedAt,
+        badge: BADGE_MODULO[c.modulo],
+        titolo: c.titolo,
+        descrizione: c.messaggi.find((m) => m.ruolo === "assistente")?.contenuto?.slice(0, 150),
+        causaId: c.causaId,
+        kind: "conversazione",
+      }));
+    return [...daAttivita, ...daConversazioni].sort(
+      (a, b) => +new Date(b.data) - +new Date(a.data),
+    );
+  }, [cliente, conversazioni]);
+
+  const eliminaStorico = (item: TimelineItem) => {
+    if (!cliente) return;
+    if (item.kind === "attivita") removeAttivita(cliente.id, item.id);
+    else removeConversazione(item.id);
+  };
 
   if (!cliente && !dataLoaded) {
     return (
@@ -178,7 +224,7 @@ export default function ClienteDetailPage() {
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: "panoramica", label: "Panoramica" },
     { key: "pratiche", label: "Pratiche", count: cliente.cause.length },
-    { key: "storico", label: "Storico", count: cliente.attivita.length },
+    { key: "storico", label: "Storico", count: storicoOrdinato.length },
     { key: "documenti", label: "Documenti", count: cliente.documenti.length },
   ];
 
@@ -343,7 +389,7 @@ export default function ClienteDetailPage() {
             <EmptyState icon={<CalendarClock size={24} />} title="Storico vuoto" description="Registra le attività svolte per tenere traccia della pratica." />
           ) : (
             <div className="card p-5">
-              <Timeline items={storicoOrdinato} cause={cliente.cause} onDelete={(aid) => removeAttivita(cliente.id, aid)} />
+              <Timeline items={storicoOrdinato} cause={cliente.cause} onDelete={eliminaStorico} />
             </div>
           )}
         </div>
@@ -459,30 +505,33 @@ function Timeline({
   cause,
   onDelete,
 }: {
-  items: { id: string; data: string; tipo: keyof typeof TIPO_ATTIVITA; titolo: string; descrizione?: string; causaId?: string }[];
+  items: TimelineItem[];
   cause: { id: string; oggetto: string }[];
-  onDelete?: (id: string) => void;
+  onDelete?: (item: TimelineItem) => void;
 }) {
   return (
     <ol className="relative space-y-5 border-l border-border pl-5">
       {items.map((a) => {
-        const meta = TIPO_ATTIVITA[a.tipo];
         const causa = cause.find((c) => c.id === a.causaId);
         return (
           <li key={a.id} className="relative">
-            <span className="absolute -left-[1.65rem] top-1 grid h-3 w-3 place-items-center rounded-full border-2 border-surface bg-primary" />
+            <span
+              className={`absolute -left-[1.65rem] top-1 grid h-3 w-3 place-items-center rounded-full border-2 border-surface ${
+                a.kind === "conversazione" ? "bg-accent" : "bg-primary"
+              }`}
+            />
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={meta.tone}>{meta.label}</Badge>
-                  <span className="text-xs text-muted-2">{formatData(a.data)}</span>
+                  <Badge tone={a.badge.tone}>{a.badge.label}</Badge>
+                  <span className="text-xs text-muted-2">{formatData(a.data, true)}</span>
                 </div>
                 <p className="mt-1 font-medium">{a.titolo}</p>
-                {a.descrizione && <p className="mt-0.5 text-sm text-muted">{a.descrizione}</p>}
+                {a.descrizione && <p className="mt-0.5 line-clamp-2 text-sm text-muted">{a.descrizione}</p>}
                 {causa && <p className="mt-1 text-xs text-muted-2">↳ {causa.oggetto}</p>}
               </div>
               {onDelete && (
-                <button onClick={() => onDelete(a.id)} className="rounded p-1 text-muted-2 hover:text-danger" aria-label="Elimina">
+                <button onClick={() => onDelete(a)} className="rounded p-1 text-muted-2 hover:text-danger" aria-label="Elimina">
                   <Trash2 size={14} />
                 </button>
               )}
