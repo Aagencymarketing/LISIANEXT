@@ -6,11 +6,12 @@ import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
+import { AiPanelHandle } from "@/components/ai/AiPanelHandle";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
-import { FileSearch, Send, Square, Check, Plus, PanelRight, User } from "lucide-react";
+import { FileSearch, Send, Square, Check, Plus, User } from "lucide-react";
 
 export default function PareriPage() {
   const clienti = useApp((s) => s.clienti);
@@ -95,23 +96,14 @@ export default function PareriPage() {
       </div>
 
       <div className="flex gap-5">
-        <div className="mx-auto min-w-0 flex-1 space-y-5 lg:mx-0" style={{ maxWidth: "48rem" }}>
+        <div className="min-w-0 flex-1">
+         <div className="mx-auto w-full max-w-3xl space-y-5">
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">Quesito giuridico</span>
-              <div className="flex items-center gap-1">
-                <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
-                  <Plus size={14} /> Nuovo
-                </button>
-                <button
-                  onClick={toggleAiPanel}
-                  className="hidden rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground xl:inline-flex"
-                  aria-label={aiPanelOpen ? "Chiudi pareri" : "Apri pareri"}
-                  title={aiPanelOpen ? "Nascondi pareri salvati" : "Mostra pareri salvati"}
-                >
-                  <PanelRight size={16} />
-                </button>
-              </div>
+              <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
+                <Plus size={14} /> Nuovo
+              </button>
             </div>
             <Textarea
               value={quesito}
@@ -164,10 +156,11 @@ export default function PareriPage() {
               )}
             </div>
           )}
+         </div>
         </div>
 
-        {aiPanelOpen && (
-          <aside className="hidden w-72 shrink-0 xl:block">
+        {aiPanelOpen ? (
+          <aside className="hidden w-72 shrink-0 lg:block">
             <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
               <ConversazioniPanel
                 modulo="pareri"
@@ -179,6 +172,8 @@ export default function PareriPage() {
               />
             </div>
           </aside>
+        ) : (
+          <AiPanelHandle label="Pareri fatti" onClick={toggleAiPanel} />
         )}
       </div>
     </div>

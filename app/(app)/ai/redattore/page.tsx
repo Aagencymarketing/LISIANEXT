@@ -7,12 +7,13 @@ import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
+import { AiPanelHandle } from "@/components/ai/AiPanelHandle";
 import { Markdown } from "@/components/Markdown";
 import { Button, Field, Textarea, Select } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
-import { PenLine, Sparkles, Square, Check, Copy, Plus, PanelRight, User } from "lucide-react";
+import { PenLine, Sparkles, Square, Check, Copy, Plus, User } from "lucide-react";
 
 function Redattore() {
   const params = useSearchParams();
@@ -117,23 +118,14 @@ function Redattore() {
       </div>
 
       <div className="flex gap-5">
-        <div className="mx-auto min-w-0 flex-1 space-y-5 lg:mx-0" style={{ maxWidth: "48rem" }}>
+        <div className="min-w-0 flex-1">
+         <div className="mx-auto w-full max-w-3xl space-y-5">
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">Tipo di atto</span>
-              <div className="flex items-center gap-1">
-                <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
-                  <Plus size={14} /> Nuova
-                </button>
-                <button
-                  onClick={toggleAiPanel}
-                  className="hidden rounded-lg p-1.5 text-muted hover:bg-surface-hover hover:text-foreground xl:inline-flex"
-                  aria-label={aiPanelOpen ? "Chiudi bozze" : "Apri bozze"}
-                  title={aiPanelOpen ? "Nascondi bozze salvate" : "Mostra bozze salvate"}
-                >
-                  <PanelRight size={16} />
-                </button>
-              </div>
+              <button onClick={nuovo} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-surface-hover">
+                <Plus size={14} /> Nuova
+              </button>
             </div>
             <Select value={tipoAtto} onChange={(e) => setTipoAtto(e.target.value)}>
               {TIPI_ATTO.map((t) => (
@@ -204,10 +196,11 @@ function Redattore() {
               )}
             </div>
           )}
+         </div>
         </div>
 
-        {aiPanelOpen && (
-          <aside className="hidden w-72 shrink-0 xl:block">
+        {aiPanelOpen ? (
+          <aside className="hidden w-72 shrink-0 lg:block">
             <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
               <ConversazioniPanel
                 modulo="redattore"
@@ -219,6 +212,8 @@ function Redattore() {
               />
             </div>
           </aside>
+        ) : (
+          <AiPanelHandle label="Bozze fatte" onClick={toggleAiPanel} />
         )}
       </div>
     </div>

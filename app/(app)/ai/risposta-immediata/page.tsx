@@ -7,9 +7,10 @@ import { useUser } from "@/lib/auth/useUser";
 import { generaRisposta, streamRisposta } from "@/lib/ai/mock";
 import { Markdown } from "@/components/Markdown";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
+import { AiPanelHandle } from "@/components/ai/AiPanelHandle";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
-import { Sparkles, Send, Plus, Square, MessageSquare, Link2, PanelRight } from "lucide-react";
+import { Sparkles, Send, Plus, Square, MessageSquare, Link2 } from "lucide-react";
 
 const ESEMPI = [
   "Si ritiene possibile l'impugnazione della graduatoria?",
@@ -182,14 +183,6 @@ function Chat() {
             >
               <Plus size={16} /> Nuova
             </button>
-            <button
-              onClick={toggleAiPanel}
-              className="hidden rounded-lg p-2 text-muted hover:bg-surface-hover hover:text-foreground lg:inline-flex"
-              aria-label={aiPanelOpen ? "Chiudi conversazioni" : "Apri conversazioni"}
-              title={aiPanelOpen ? "Nascondi conversazioni" : "Mostra conversazioni"}
-            >
-              <PanelRight size={18} />
-            </button>
           </div>
         </div>
 
@@ -278,8 +271,8 @@ function Chat() {
         </form>
       </div>
 
-      {/* Pannello conversazioni salvate */}
-      {aiPanelOpen && (
+      {/* Pannello conversazioni salvate (richiudibile) */}
+      {aiPanelOpen ? (
         <aside className="hidden w-72 shrink-0 lg:block">
           <div className="card h-full p-4">
             <ConversazioniPanel
@@ -292,6 +285,8 @@ function Chat() {
             />
           </div>
         </aside>
+      ) : (
+        <AiPanelHandle label="Conversazioni" onClick={toggleAiPanel} />
       )}
     </div>
   );
