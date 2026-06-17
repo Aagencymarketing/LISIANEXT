@@ -6,7 +6,7 @@ import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
-import { AiPanelHandle } from "@/components/ai/AiPanelHandle";
+import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
@@ -97,6 +97,11 @@ export default function PareriPage() {
 
       <div className="flex gap-5">
         <div className="min-w-0 flex-1">
+         {!aiPanelOpen && (
+           <div className="mb-3 flex justify-end">
+             <AiPanelOpenButton label="Pareri fatti" onClick={toggleAiPanel} />
+           </div>
+         )}
          <div className="mx-auto w-full max-w-3xl space-y-5">
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -159,7 +164,7 @@ export default function PareriPage() {
          </div>
         </div>
 
-        {aiPanelOpen ? (
+        {aiPanelOpen && (
           <aside className="hidden w-72 shrink-0 lg:block">
             <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
               <ConversazioniPanel
@@ -172,8 +177,6 @@ export default function PareriPage() {
               />
             </div>
           </aside>
-        ) : (
-          <AiPanelHandle label="Pareri fatti" onClick={toggleAiPanel} />
         )}
       </div>
     </div>

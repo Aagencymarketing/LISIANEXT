@@ -7,7 +7,7 @@ import { useUser } from "@/lib/auth/useUser";
 import { generaRisposta, streamRisposta } from "@/lib/ai/mock";
 import { Markdown } from "@/components/Markdown";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
-import { AiPanelHandle } from "@/components/ai/AiPanelHandle";
+import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
 import { Sparkles, Send, Plus, Square, MessageSquare, Link2 } from "lucide-react";
@@ -183,6 +183,9 @@ function Chat() {
             >
               <Plus size={16} /> Nuova
             </button>
+            {!aiPanelOpen && (
+              <AiPanelOpenButton label="Conversazioni" onClick={toggleAiPanel} />
+            )}
           </div>
         </div>
 
@@ -272,7 +275,7 @@ function Chat() {
       </div>
 
       {/* Pannello conversazioni salvate (richiudibile) */}
-      {aiPanelOpen ? (
+      {aiPanelOpen && (
         <aside className="hidden w-72 shrink-0 lg:block">
           <div className="card h-full p-4">
             <ConversazioniPanel
@@ -285,8 +288,6 @@ function Chat() {
             />
           </div>
         </aside>
-      ) : (
-        <AiPanelHandle label="Conversazioni" onClick={toggleAiPanel} />
       )}
     </div>
   );

@@ -7,7 +7,7 @@ import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
-import { AiPanelHandle } from "@/components/ai/AiPanelHandle";
+import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Markdown } from "@/components/Markdown";
 import { Button, Field, Textarea, Select } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
@@ -119,6 +119,11 @@ function Redattore() {
 
       <div className="flex gap-5">
         <div className="min-w-0 flex-1">
+         {!aiPanelOpen && (
+           <div className="mb-3 flex justify-end">
+             <AiPanelOpenButton label="Bozze fatte" onClick={toggleAiPanel} />
+           </div>
+         )}
          <div className="mx-auto w-full max-w-3xl space-y-5">
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -199,7 +204,7 @@ function Redattore() {
          </div>
         </div>
 
-        {aiPanelOpen ? (
+        {aiPanelOpen && (
           <aside className="hidden w-72 shrink-0 lg:block">
             <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
               <ConversazioniPanel
@@ -212,8 +217,6 @@ function Redattore() {
               />
             </div>
           </aside>
-        ) : (
-          <AiPanelHandle label="Bozze fatte" onClick={toggleAiPanel} />
         )}
       </div>
     </div>
