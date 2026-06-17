@@ -30,7 +30,7 @@ export default function AbbonamentoPage() {
       <div className="card mb-6 flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="text-sm text-muted">Credito residuo</p>
-          <p className="text-3xl font-bold">€ 295,97</p>
+          <p className="text-3xl font-bold">€ 0,00</p>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted">
           <Zap size={16} className="text-accent" /> Piano <span className="font-semibold text-foreground">Studio</span> attivo

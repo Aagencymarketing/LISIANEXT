@@ -41,7 +41,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         <span className="grid h-4 w-4 place-items-center rounded-full bg-primary-soft text-[10px] text-primary">
           €
         </span>
-        295,97
+        0,00
       </div>
 
       <IconButton aria-label="Notifiche" className="relative">
