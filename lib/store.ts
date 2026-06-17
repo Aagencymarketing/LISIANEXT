@@ -15,6 +15,12 @@ import { uuid, oggi } from "./utils";
 import * as gdb from "./db/gestionale";
 import { caricaCronologia, insertCronologia } from "./db/cronologia";
 import { caricaPreferiti, addPreferitoDb, removePreferitoDb } from "./db/preferiti";
+import {
+  caricaConversazioni,
+  insertConversazione,
+  updateConversazioneDb,
+  deleteConversazioneDb,
+} from "./db/conversazioni";
 
 type Theme = "light" | "dark";
 
@@ -68,6 +74,8 @@ interface AppState {
 
   // ---- AI / cronologia ----
   addConversazione: (c: ConversazioneAI) => void;
+  updateConversazione: (id: string, patch: Partial<ConversazioneAI>) => void;
+  removeConversazione: (id: string) => void;
   addCronologia: (v: Omit<VoceCronologia, "id" | "createdAt">) => void;
   togglePreferito: (id: string) => void;
 
@@ -101,12 +109,13 @@ export const useApp = create<AppState>()(
 
       hydrateFromSupabase: async () => {
         try {
-          const [clienti, cronologia, preferiti] = await Promise.all([
+          const [clienti, cronologia, preferiti, conversazioni] = await Promise.all([
             gdb.caricaClienti(),
             caricaCronologia(),
             caricaPreferiti(),
+            caricaConversazioni(),
           ]);
-          set({ clienti, cronologia, preferiti, dataLoaded: true });
+          set({ clienti, cronologia, preferiti, conversazioni, dataLoaded: true });
         } catch (e) {
           console.error("[supabase] hydrate", e);
           set({ dataLoaded: true });
@@ -261,8 +270,24 @@ export const useApp = create<AppState>()(
         persistWrite(gdb.deleteDocumentoDb(docId));
       },
 
-      addConversazione: (c) =>
-        set((s) => ({ conversazioni: [c, ...s.conversazioni] })),
+      addConversazione: (c) => {
+        set((s) => ({ conversazioni: [c, ...s.conversazioni] }));
+        persistWrite(insertConversazione(c));
+      },
+
+      updateConversazione: (id, patch) => {
+        set((s) => ({
+          conversazioni: s.conversazioni.map((c) =>
+            c.id === id ? { ...c, ...patch, updatedAt: oggi() } : c,
+          ),
+        }));
+        persistWrite(updateConversazioneDb(id, patch));
+      },
+
+      removeConversazione: (id) => {
+        set((s) => ({ conversazioni: s.conversazioni.filter((c) => c.id !== id) }));
+        persistWrite(deleteConversazioneDb(id));
+      },
 
       addCronologia: (v) => {
         const nuova: VoceCronologia = { ...v, id: uuid(), createdAt: oggi() };

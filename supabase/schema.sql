@@ -121,6 +121,20 @@ create table if not exists public.preferiti (
   unique (user_id, sentenza_id)
 );
 
+-- ---------- CONVERSAZIONI AI (chat, pareri, atti) ----------
+create table if not exists public.conversazioni (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  modulo text not null default 'risposta_immediata'
+    check (modulo in ('risposta_immediata','pareri','redattore','ricerche')),
+  titolo text not null,
+  messaggi jsonb not null default '[]'::jsonb,
+  cliente_id uuid references public.clienti (id) on delete set null,
+  causa_id uuid references public.cause (id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- ---------- INDICI ----------
 create index if not exists idx_clienti_user on public.clienti (user_id);
 create index if not exists idx_cause_user on public.cause (user_id);
@@ -132,6 +146,8 @@ create index if not exists idx_documenti_user on public.documenti (user_id);
 create index if not exists idx_documenti_cliente on public.documenti (cliente_id);
 create index if not exists idx_cronologia_user on public.cronologia (user_id);
 create index if not exists idx_preferiti_user on public.preferiti (user_id);
+create index if not exists idx_conversazioni_user on public.conversazioni (user_id);
+create index if not exists idx_conversazioni_cliente on public.conversazioni (cliente_id);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -143,6 +159,7 @@ alter table public.attivita   enable row level security;
 alter table public.documenti  enable row level security;
 alter table public.cronologia enable row level security;
 alter table public.preferiti  enable row level security;
+alter table public.conversazioni enable row level security;
 
 -- PROFILI: l'utente vede/aggiorna solo il proprio profilo
 drop policy if exists "profili_select" on public.profiles;
@@ -160,7 +177,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['clienti','cause','attivita','documenti','cronologia','preferiti']
+  foreach t in array array['clienti','cause','attivita','documenti','cronologia','preferiti','conversazioni']
   loop
     execute format('drop policy if exists "%1$s_select" on public.%1$s;', t);
     execute format('create policy "%1$s_select" on public.%1$s for select using (user_id = auth.uid());', t);

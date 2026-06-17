@@ -10,7 +10,7 @@ export function useAIStream(modulo: ModuloAI) {
   const abortRef = useRef<AbortController | null>(null);
 
   const run = useCallback(
-    async (prompt: string, ctx?: ContestoAI) => {
+    async (prompt: string, ctx?: ContestoAI): Promise<string | null> => {
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
@@ -22,7 +22,9 @@ export function useAIStream(modulo: ModuloAI) {
         acc += chunk;
         setOutput(acc);
       }
-      if (!ac.signal.aborted) setLoading(false);
+      if (ac.signal.aborted) return null;
+      setLoading(false);
+      return acc;
     },
     [modulo],
   );
