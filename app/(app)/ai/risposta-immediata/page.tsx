@@ -12,7 +12,7 @@ import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
-import { Sparkles, Send, Plus, Square, MessageSquare, Link2 } from "lucide-react";
+import { Sparkles, Send, Plus, Square, MessageSquare, Link2, PanelRight } from "lucide-react";
 
 const ESEMPI = [
   "Si ritiene possibile l'impugnazione della graduatoria?",
@@ -174,19 +174,19 @@ function Chat() {
     <div className="flex h-[calc(100dvh-8rem)] gap-5">
       {/* Colonna chat */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        {/* Header DESKTOP (invariato) */}
+        <div className="mb-3 hidden flex-wrap items-center justify-between gap-2 lg:flex">
           <div className="flex items-center gap-2">
             <MessageSquare size={18} className="text-primary" />
             <h1 className="text-lg font-semibold">Risposta immediata</h1>
           </div>
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-            {/* Collega a cliente */}
-            <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1">
-              <Link2 size={14} className="shrink-0 text-muted-2" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1">
+              <Link2 size={14} className="text-muted-2" />
               <select
                 value={clienteId || ""}
                 onChange={(e) => collega(e.target.value || undefined)}
-                className="min-w-0 max-w-[150px] bg-transparent text-sm outline-none"
+                className="max-w-[150px] bg-transparent text-sm outline-none"
               >
                 <option value="">Nessun cliente</option>
                 {clienti.map((c) => (
@@ -209,16 +209,56 @@ function Chat() {
           </div>
         </div>
 
+        {/* Header MOBILE: barra compatta su una riga */}
+        <div className="mb-3 flex flex-wrap items-center gap-2 lg:hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1.5">
+            <Link2 size={14} className="shrink-0 text-muted-2" />
+            <select
+              value={clienteId || ""}
+              onChange={(e) => collega(e.target.value || undefined)}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            >
+              <option value="">Nessun cliente</option>
+              {clienti.map((c) => (
+                <option key={c.id} value={c.id}>{nomeCliente(c)}</option>
+              ))}
+            </select>
+          </div>
+          {!aiPanelOpen && (
+            <button
+              onClick={toggleAiPanel}
+              aria-label="Apri Conversazioni"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-2 text-sm font-medium text-muted"
+            >
+              <PanelRight size={15} /> Conversazioni
+            </button>
+          )}
+          <button
+            onClick={nuova}
+            aria-label="Nuova conversazione"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border text-muted"
+          >
+            <Plus size={16} />
+          </button>
+          {!vuota && messaggi.length > 0 && (
+            <EsportaButtons titolo={messaggi[0]?.contenuto.slice(0, 50) || "Conversazione"} testo={trascrizione} />
+          )}
+        </div>
+
         <div ref={scrollRef} className="flex-1 overflow-y-auto rounded-2xl">
           {vuota ? (
-            <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center text-center">
-              <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-primary-soft text-primary">
+            <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-start pt-6 text-center lg:justify-center lg:pt-0">
+              <div className="mb-5 grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary">
                 <Sparkles size={28} />
               </div>
-              <h2 className="text-2xl font-bold">
+              {/* Desktop: saluto come la home */}
+              <h2 className="hidden text-2xl font-bold lg:block">
                 Ciao, <span className="text-primary">{saluto}</span>
               </h2>
-              <p className="mt-1 text-muted">Come posso aiutarti oggi nella tua ricerca giuridica?</p>
+              <p className="mt-1 hidden text-muted lg:block">Come posso aiutarti oggi nella tua ricerca giuridica?</p>
+              {/* Mobile: identità della sezione */}
+              <h2 className="text-2xl font-bold lg:hidden">Risposta immediata</h2>
+              <p className="mt-1 text-muted lg:hidden">Risposte rapide e puntuali ai tuoi quesiti giuridici: scrivi una domanda qui sotto.</p>
               <div className="mt-6 w-full space-y-2">
                 {ESEMPI.map((e) => (
                   <button
