@@ -9,8 +9,10 @@ import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
+import { VarianteParereSelect } from "@/components/ai/VarianteParereSelect";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
+import type { VarianteParere } from "@/lib/ai/client";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { FileSearch, Send, Square, Check, Plus, User, Copy } from "lucide-react";
@@ -29,6 +31,7 @@ export default function PareriPage() {
   const [causaId, setCausaId] = useState<string>();
   const [convId, setConvId] = useState<string>();
   const [copiato, setCopiato] = useState(false);
+  const [variante, setVariante] = useState<VarianteParere>("completo");
 
   const { output, loading, run, stop, setOutput } = useAIStream("pareri");
 
@@ -56,7 +59,7 @@ export default function PareriPage() {
     if (!quesito.trim()) return;
     setConvId(undefined);
     addCronologia({ testo: quesito.slice(0, 120), tipo: "Parere" });
-    const testo = await run(quesito, { cliente, causa });
+    const testo = await run(quesito, { cliente, causa }, { variante });
     if (testo) {
       const id = uuid();
       setConvId(id);
@@ -125,6 +128,10 @@ export default function PareriPage() {
               rows={5}
               placeholder="Descrivi in dettaglio la fattispecie, le parti coinvolte, gli elementi fattuali rilevanti e il quesito specifico..."
             />
+
+            <div className="mt-5">
+              <VarianteParereSelect value={variante} onChange={setVariante} />
+            </div>
 
             <div className="mt-5">
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Documenti (opzionale)</p>

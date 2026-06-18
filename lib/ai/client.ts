@@ -3,7 +3,9 @@
 import type { ModuloAI } from "@/lib/types";
 import { nomeCliente } from "@/lib/types";
 import { generaRisposta, streamRisposta, type ContestoAI } from "@/lib/ai/mock";
-import type { ContestoAIPayload } from "@/lib/ai/prompts";
+import type { ContestoAIPayload, VarianteParere } from "@/lib/ai/prompts";
+
+export type { VarianteParere };
 
 // Flag: AI reale collegata quando la variabile pubblica vale "true".
 // In assenza (demo, nessuna chiave), si usa il motore simulato.
@@ -54,6 +56,7 @@ export async function streamAI(
   signal?: AbortSignal,
   storia?: Turno[],
   documenti?: DocumentoRef[],
+  variante?: VarianteParere,
 ): Promise<string> {
   if (!AI_COLLEGATO) {
     // --- Simulato ---
@@ -70,7 +73,7 @@ export async function streamAI(
   const res = await fetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ modulo, prompt, contesto: toPayload(ctx), storia, documenti }),
+    body: JSON.stringify({ modulo, prompt, contesto: toPayload(ctx), storia, documenti, variante }),
     signal,
   });
 

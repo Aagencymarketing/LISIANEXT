@@ -5,6 +5,7 @@ import {
   buildUserMessage,
   maxTokens,
   type ContestoAIPayload,
+  type VarianteParere,
 } from "@/lib/ai/prompts";
 import type { ModuloAI } from "@/lib/types";
 
@@ -30,6 +31,7 @@ interface Body {
   contesto?: ContestoAIPayload;
   storia?: Turno[];
   documenti?: DocumentoRef[];
+  variante?: VarianteParere;
 }
 
 const IMG: Record<string, "image/png" | "image/jpeg" | "image/webp" | "image/gif"> = {
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
   } catch {
     return new Response("Richiesta non valida", { status: 400 });
   }
-  const { modulo, prompt, contesto, storia, documenti } = body;
+  const { modulo, prompt, contesto, storia, documenti, variante } = body;
   if (!prompt || !modulo) {
     return new Response("Parametri mancanti", { status: 400 });
   }
@@ -133,7 +135,7 @@ export async function POST(req: Request) {
           max_tokens: maxTokens(modulo),
           thinking: { type: "adaptive" },
           output_config: { effort: "medium" },
-          system: systemPrompt(modulo),
+          system: systemPrompt(modulo, variante),
           messages: [
             ...messaggiPrecedenti,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

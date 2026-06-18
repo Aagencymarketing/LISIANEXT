@@ -101,7 +101,24 @@ Modalità: RICERCA GIURIDICA.
 Aiuta a inquadrare la ricerca e i criteri rilevanti. I precedenti reali provengono dalla banca dati sentenze esterna.`,
 };
 
-export function systemPrompt(modulo: ModuloAI): string {
+export type VarianteParere = "completo" | "sintetico";
+
+// Variante "sintetica" del parere: più breve e diretta, senza l'impalcatura formale completa.
+const PARERE_SINTETICO = `${PREAMBOLO}
+
+Modalità: PARERE LEGALE SINTETICO.
+Redigi un parere essenziale ma professionale: più breve e diretto del parere completo, vai alla sostanza senza impalcatura formale pesante.
+Struttura snella:
+- Riga "**OGGETTO:** ..." (una riga).
+- **Quesito** in una frase.
+- **Inquadramento e quadro normativo**: i riferimenti normativi essenziali (articoli di codice, leggi, decreti) e l'orientamento prevalente, in modo conciso.
+- **Valutazione**: analisi del caso con i principali profili di rischio.
+- **Conclusioni operative**: cosa conviene fare, in che ordine, con i termini rilevanti.
+Lunghezza contenuta (indicativamente mezza pagina/una pagina). Usa elenchi puntati dove aiutano. Niente tabella obbligatoria, niente intestazione con firma né disclaimer salvo siano richiesti.
+Cita le norme in modo puntuale; gli estremi di sentenze solo se ne sei sicuro. Metti in **grassetto** i termini chiave.`;
+
+export function systemPrompt(modulo: ModuloAI, variante?: VarianteParere): string {
+  if (modulo === "pareri" && variante === "sintetico") return PARERE_SINTETICO;
   return SYSTEM[modulo] ?? SYSTEM.risposta_immediata;
 }
 

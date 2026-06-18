@@ -2,10 +2,11 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useApp } from "@/lib/store";
-import { streamAI, type DocumentoRef } from "@/lib/ai/client";
+import { streamAI, type DocumentoRef, type VarianteParere } from "@/lib/ai/client";
 import { Markdown } from "@/components/Markdown";
 import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
+import { VarianteParereSelect } from "@/components/ai/VarianteParereSelect";
 import { Modal, Button, Select, Textarea } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
 import { nomeCliente, type Cliente, type ModuloAI, type ConversazioneAI } from "@/lib/types";
@@ -33,6 +34,7 @@ export function AnalizzaEsegui({
   const addCronologia = useApp((s) => s.addCronologia);
 
   const [azione, setAzione] = useState<ModuloAI>("pareri");
+  const [variante, setVariante] = useState<VarianteParere>("completo");
   const [tipoAtto, setTipoAtto] = useState<string>(TIPI_ATTO[0]);
   const [causaId, setCausaId] = useState<string | undefined>(cliente.cause[0]?.id);
   const [istruzioni, setIstruzioni] = useState("");
@@ -111,6 +113,7 @@ export function AnalizzaEsegui({
         ac.signal,
         undefined,
         documenti.length ? documenti : undefined,
+        azione === "pareri" ? variante : undefined,
       );
     } catch (e) {
       if (!ac.signal.aborted) {
@@ -197,6 +200,11 @@ export function AnalizzaEsegui({
               })}
             </div>
           </div>
+
+          {/* Tipo di parere */}
+          {azione === "pareri" && (
+            <VarianteParereSelect value={variante} onChange={setVariante} />
+          )}
 
           {/* Tipo atto */}
           {azione === "redattore" && (
