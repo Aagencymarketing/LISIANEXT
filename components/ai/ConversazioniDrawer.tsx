@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ConversazioniPanel } from "./ConversazioniPanel";
 import type { ConversazioneAI, ModuloAI } from "@/lib/types";
 
 /**
- * Versione MOBILE del pannello conversazioni: drawer in overlay sopra il
- * contenuto, con sfondo oscurato/sfocato. Non restringe la pagina (a differenza
- * del pannello desktop affiancato). Visibile solo sotto il breakpoint lg.
+ * Versione MOBILE del pannello conversazioni: drawer in overlay che scorre da
+ * destra, SOTTO l'header (che resta sempre visibile), con sfondo oscurato/sfocato.
+ * Renderizzato via portal sul body così il posizionamento `fixed` è sempre
+ * relativo al viewport (e non viene "intrappolato" da contenitori con transform,
+ * es. `animate-in` sulle pagine Pareri/Redattore). Visibile solo sotto lg.
  */
 export function ConversazioniDrawer({
   open,
@@ -26,8 +29,10 @@ export function ConversazioniDrawer({
   onNuova?: () => void;
   onClose: () => void;
 }) {
-  // Blocca lo scroll del body mentre il drawer è aperto (solo su mobile;
-  // su desktop il drawer è nascosto e non deve interferire).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Blocca lo scroll del body mentre il drawer è aperto (solo su mobile).
   useEffect(() => {
     if (!open) return;
     if (typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches) return;
@@ -37,15 +42,16 @@ export function ConversazioniDrawer({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 lg:hidden">
+  return createPortal(
+    // top-16 = altezza dell'header (h-16): il drawer parte sotto l'header.
+    <div className="fixed inset-x-0 bottom-0 top-16 z-40 lg:hidden">
       <div
         className="absolute inset-0 animate-in bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <aside className="absolute right-0 top-0 flex h-full w-[86%] max-w-sm flex-col bg-surface p-4 shadow-[var(--shadow-pop)] animate-in">
+      <aside className="absolute bottom-0 right-0 top-0 flex w-[86%] max-w-sm flex-col border-l border-border bg-surface p-4 shadow-[var(--shadow-pop)] animate-in">
         <ConversazioniPanel
           modulo={modulo}
           titolo={titolo}
@@ -55,6 +61,7 @@ export function ConversazioniDrawer({
           onClose={onClose}
         />
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
