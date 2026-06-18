@@ -3,8 +3,8 @@
 import { PanelRight } from "lucide-react";
 
 /**
- * Pulsante orizzontale (icona + etichetta) per riaprire il pannello laterale,
- * posizionato in alto a destra del contenuto. Visibile solo da lg in su.
+ * Pulsante orizzontale (icona + etichetta) per aprire il pannello laterale.
+ * Su desktop apre il pannello affiancato; su mobile apre il drawer in overlay.
  */
 export function AiPanelOpenButton({
   label,
@@ -18,7 +18,7 @@ export function AiPanelOpenButton({
       onClick={onClick}
       aria-label={`Apri ${label}`}
       title={`Apri ${label}`}
-      className="hidden items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-surface-hover hover:text-foreground lg:inline-flex"
+      className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-surface-hover hover:text-foreground"
     >
       <PanelRight size={16} />
       {label}

@@ -5,7 +5,7 @@ import { IconButton } from "@/components/ui";
 import { useApp } from "@/lib/store";
 import { useUser, iniziali } from "@/lib/auth/useUser";
 import { signOutAction } from "@/lib/auth/actions";
-import { PanelLeft, Bell, Sun, Moon, LogOut, ChevronDown } from "lucide-react";
+import { Menu, Bell, Sun, Moon, LogOut, ChevronDown } from "lucide-react";
 
 export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const theme = useApp((s) => s.theme);
@@ -32,7 +32,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6">
       <IconButton onClick={onOpenMenu} className="lg:hidden" aria-label="Apri menu">
-        <PanelLeft size={20} />
+        <Menu size={22} />
       </IconButton>
 
       <div className="flex-1" />

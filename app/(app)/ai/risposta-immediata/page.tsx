@@ -7,6 +7,7 @@ import { useUser } from "@/lib/auth/useUser";
 import { streamAI } from "@/lib/ai/client";
 import { Markdown } from "@/components/Markdown";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
+import { ConversazioniDrawer } from "@/components/ai/ConversazioniDrawer";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { uid, uuid, oggi } from "@/lib/utils";
@@ -308,6 +309,16 @@ function Chat() {
           </div>
         </aside>
       )}
+
+      <ConversazioniDrawer
+        open={aiPanelOpen}
+        modulo="risposta_immediata"
+        titolo="Conversazioni"
+        attivoId={convId}
+        onApri={apri}
+        onNuova={nuova}
+        onClose={toggleAiPanel}
+      />
     </div>
   );
 }

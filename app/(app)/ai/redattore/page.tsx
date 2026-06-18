@@ -7,6 +7,7 @@ import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
+import { ConversazioniDrawer } from "@/components/ai/ConversazioniDrawer";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
@@ -227,6 +228,16 @@ function Redattore() {
           </aside>
         )}
       </div>
+
+      <ConversazioniDrawer
+        open={aiPanelOpen}
+        modulo="redattore"
+        titolo="Bozze fatte"
+        attivoId={convId}
+        onApri={apri}
+        onNuova={nuovo}
+        onClose={toggleAiPanel}
+      />
     </div>
   );
 }
