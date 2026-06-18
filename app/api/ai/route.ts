@@ -13,11 +13,32 @@ export const maxDuration = 300;
 
 const MODELLO = "claude-opus-4-8";
 
+interface Turno {
+  ruolo: "utente" | "assistente";
+  contenuto: string;
+}
+
+interface DocumentoRef {
+  path: string;
+  nome: string;
+  estensione?: string;
+}
+
 interface Body {
   modulo: ModuloAI;
   prompt: string;
   contesto?: ContestoAIPayload;
+  storia?: Turno[];
+  documenti?: DocumentoRef[];
 }
+
+const IMG: Record<string, "image/png" | "image/jpeg" | "image/webp" | "image/gif"> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  gif: "image/gif",
+};
 
 export async function POST(req: Request) {
   // 1) Solo utenti autenticati
@@ -43,10 +64,62 @@ export async function POST(req: Request) {
   } catch {
     return new Response("Richiesta non valida", { status: 400 });
   }
-  const { modulo, prompt, contesto } = body;
+  const { modulo, prompt, contesto, storia, documenti } = body;
   if (!prompt || !modulo) {
     return new Response("Parametri mancanti", { status: 400 });
   }
+
+  // Storico conversazione (multi-turno). L'ultimo messaggio utente è `prompt`.
+  const messaggiPrecedenti = (storia ?? [])
+    .filter((m) => m.contenuto?.trim())
+    .map((m) => ({
+      role: m.ruolo === "assistente" ? ("assistant" as const) : ("user" as const),
+      content: m.contenuto,
+    }));
+
+  // Documenti allegati: PDF e immagini letti nativamente da Claude; TXT come testo.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blocchiDoc: any[] = [];
+  const testiDoc: string[] = [];
+  const saltati: string[] = [];
+  for (const d of documenti ?? []) {
+    const est = (d.estensione || d.nome.split(".").pop() || "").toLowerCase();
+    try {
+      const { data, error } = await supabase.storage.from("documenti").download(d.path);
+      if (error || !data) {
+        saltati.push(d.nome);
+        continue;
+      }
+      const buf = Buffer.from(await data.arrayBuffer());
+      if (est === "pdf") {
+        blocchiDoc.push({
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
+          title: d.nome,
+        });
+      } else if (IMG[est]) {
+        blocchiDoc.push({
+          type: "image",
+          source: { type: "base64", media_type: IMG[est], data: buf.toString("base64") },
+        });
+      } else if (est === "txt") {
+        testiDoc.push(`### Documento "${d.nome}"\n${buf.toString("utf-8").slice(0, 20000)}`);
+      } else {
+        saltati.push(d.nome);
+      }
+    } catch {
+      saltati.push(d.nome);
+    }
+  }
+
+  let testoUtente = buildUserMessage(modulo, prompt, contesto);
+  if (testiDoc.length) testoUtente += `\n\nContenuto dei documenti testuali allegati:\n${testiDoc.join("\n\n")}`;
+  if (saltati.length)
+    testoUtente += `\n\n(Nota: i seguenti allegati non sono in un formato leggibile e non sono stati analizzati: ${saltati.join(", ")}.)`;
+
+  const contenutoUtente = blocchiDoc.length
+    ? [...blocchiDoc, { type: "text", text: testoUtente }]
+    : testoUtente;
 
   // 4) Streaming da Claude
   const anthropic = new Anthropic();
@@ -62,7 +135,9 @@ export async function POST(req: Request) {
           output_config: { effort: "medium" },
           system: systemPrompt(modulo),
           messages: [
-            { role: "user", content: buildUserMessage(modulo, prompt, contesto) },
+            ...messaggiPrecedenti,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { role: "user", content: contenutoUtente as any },
           ],
         });
 

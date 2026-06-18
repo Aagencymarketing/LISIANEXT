@@ -7,11 +7,13 @@ import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
+import { Elaborando } from "@/components/ai/Elaborando";
+import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
-import { FileSearch, Send, Square, Check, Plus, User } from "lucide-react";
+import { FileSearch, Send, Square, Check, Plus, User, Copy } from "lucide-react";
 
 export default function PareriPage() {
   const clienti = useApp((s) => s.clienti);
@@ -26,8 +28,15 @@ export default function PareriPage() {
   const [clienteId, setClienteId] = useState<string>();
   const [causaId, setCausaId] = useState<string>();
   const [convId, setConvId] = useState<string>();
+  const [copiato, setCopiato] = useState(false);
 
   const { output, loading, run, stop, setOutput } = useAIStream("pareri");
+
+  const copia = async () => {
+    await navigator.clipboard?.writeText(output);
+    setCopiato(true);
+    setTimeout(() => setCopiato(false), 1500);
+  };
 
   const cliente = clienti.find((c) => c.id === clienteId);
   const causa = cliente?.cause.find((c) => c.id === causaId);
@@ -120,6 +129,9 @@ export default function PareriPage() {
             <div className="mt-5">
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Documenti (opzionale)</p>
               <FileDrop files={files} onChange={setFiles} />
+              <p className="mt-1.5 text-xs text-muted-2">
+                L&apos;analisi automatica del contenuto dei documenti sarà disponibile a breve.
+              </p>
             </div>
 
             <div className="mt-5">
@@ -144,6 +156,8 @@ export default function PareriPage() {
             </div>
           </div>
 
+          {loading && !output && <Elaborando label="Sto elaborando il parere…" />}
+
           {output && (
             <div className="card animate-in p-6">
               <Markdown>{output}</Markdown>
@@ -157,6 +171,13 @@ export default function PareriPage() {
                       <User size={13} /> Collegato a {nomeCliente(cliente)} · visibile nello storico
                     </span>
                   )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button variant="secondary" size="sm" onClick={copia}>
+                      {copiato ? <Check size={16} /> : <Copy size={16} />}
+                      {copiato ? "Copiato" : "Copia"}
+                    </Button>
+                    <EsportaButtons titolo={quesito.slice(0, 60) || "Parere"} testo={output} />
+                  </div>
                 </div>
               )}
             </div>

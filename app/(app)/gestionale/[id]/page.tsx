@@ -13,6 +13,7 @@ import { ClienteForm, type ClienteDraft } from "@/components/gestionale/ClienteF
 import { CausaForm, type CausaDraft } from "@/components/gestionale/CausaForm";
 import { AttivitaForm, type AttivitaDraft } from "@/components/gestionale/AttivitaForm";
 import { ClienteAI } from "@/components/gestionale/ClienteAI";
+import { AnalizzaEsegui } from "@/components/gestionale/AnalizzaEsegui";
 import { useUser } from "@/lib/auth/useUser";
 import {
   uploadDocumento,
@@ -34,6 +35,7 @@ import {
   Euro,
   Download,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 type Tab = "panoramica" | "pratiche" | "storico" | "documenti";
@@ -82,6 +84,7 @@ export default function ClienteDetailPage() {
   const [causaOpen, setCausaOpen] = useState(false);
   const [attOpen, setAttOpen] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
+  const [aeOpen, setAeOpen] = useState(false);
   // draft buffers
   const [editDraft, setEditDraft] = useState<ClienteDraft | null>(null);
   const [editValido, setEditValido] = useState(false);
@@ -258,7 +261,10 @@ export default function ClienteDetailPage() {
               </div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => setAeOpen(true)}>
+              <Sparkles size={15} /> Analizza ed esegui
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil size={15} /> Modifica
             </Button>
@@ -425,6 +431,8 @@ export default function ClienteDetailPage() {
       )}
 
       {/* ---- MODALI ---- */}
+      <AnalizzaEsegui cliente={cliente} open={aeOpen} onClose={() => setAeOpen(false)} />
+
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Modifica cliente"
         footer={<><Button variant="secondary" onClick={() => setEditOpen(false)}>Annulla</Button><Button onClick={salvaModifica} disabled={!editValido}>Salva</Button></>}>
         <ClienteForm initial={cliente} onChange={(d, v) => { setEditDraft(d); setEditValido(v); }} />

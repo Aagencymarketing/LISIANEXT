@@ -8,6 +8,7 @@ import { streamAI } from "@/lib/ai/client";
 import { Markdown } from "@/components/Markdown";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
+import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
 import { Sparkles, Send, Plus, Square, MessageSquare, Link2 } from "lucide-react";
@@ -79,6 +80,7 @@ function Chat() {
     const ac = new AbortController();
     abortRef.current = ac;
     const cliente = clienti.find((c) => c.id === clienteId);
+    const storia = messaggi.map((m) => ({ ruolo: m.ruolo, contenuto: m.contenuto }));
     let acc = "";
     try {
       acc = await streamAI(
@@ -87,6 +89,7 @@ function Chat() {
         cliente ? { cliente } : undefined,
         (parziale) => setStreaming(parziale),
         ac.signal,
+        storia,
       );
     } catch (e) {
       if (!ac.signal.aborted) {
@@ -162,6 +165,9 @@ function Chat() {
   }, [params]);
 
   const vuota = messaggi.length === 0 && !streaming;
+  const trascrizione = messaggi
+    .map((m) => (m.ruolo === "utente" ? `## Domanda\n\n${m.contenuto}` : `## Risposta\n\n${m.contenuto}`))
+    .join("\n\n");
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] gap-5">
@@ -187,6 +193,9 @@ function Chat() {
                 ))}
               </select>
             </div>
+            {!vuota && messaggi.length > 0 && (
+              <EsportaButtons titolo={messaggi[0]?.contenuto.slice(0, 50) || "Conversazione"} testo={trascrizione} />
+            )}
             <button
               onClick={nuova}
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground"

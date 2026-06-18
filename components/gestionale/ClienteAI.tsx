@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Cliente, SentenzaRisultato } from "@/lib/types";
 import { nomeCliente } from "@/lib/types";
 import { cercaSentenze } from "@/lib/ai/sentenze";
-import { generaRisposta, streamRisposta } from "@/lib/ai/mock";
+import { streamAI } from "@/lib/ai/client";
 import { Markdown } from "@/components/Markdown";
 import { Badge, Button, Select } from "@/components/ui";
 import { Sparkles, ScanSearch, PenLine, Loader2, Database, Star } from "lucide-react";
@@ -39,11 +39,10 @@ export function ClienteAI({ cliente }: { cliente: Cliente }) {
     const prompt = causa
       ? `Riassumi la posizione del cliente nella pratica "${causa.oggetto}" e indica la strategia difensiva consigliata.`
       : `Riassumi la posizione complessiva del cliente ${nomeCliente(cliente)} e le priorità operative.`;
-    const full = generaRisposta("pareri", prompt, { cliente, causa });
-    let acc = "";
-    for await (const chunk of streamRisposta(full)) {
-      acc += chunk;
-      setAnalisi(acc);
+    try {
+      await streamAI("pareri", prompt, { cliente, causa }, (parziale) => setAnalisi(parziale));
+    } catch (e) {
+      setAnalisi(`> ⚠️ ${e instanceof Error ? e.message : "Errore imprevisto"}`);
     }
     setLoadingAn(false);
   };

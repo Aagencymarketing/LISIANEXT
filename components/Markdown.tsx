@@ -28,36 +28,118 @@ function inline(text: string, keyBase: string): ReactNode[] {
   return out;
 }
 
+const ORDERED = /^\s*\d+\.\s+/;
+const BULLET = /^\s*[-*]\s+/;
+const isTableSep = (s: string) => /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(s) && s.includes("-");
+const hasPipe = (s: string) => s.includes("|");
+
+/** Divide una riga di tabella in celle, ignorando i pipe ai bordi. */
+function cells(row: string): string[] {
+  let s = row.trim();
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|")) s = s.slice(0, -1);
+  return s.split("|").map((c) => c.trim());
+}
+
 export function Markdown({ children }: { children: string }) {
   const lines = children.split("\n");
   const blocks: ReactNode[] = [];
-  let list: string[] = [];
   let k = 0;
 
-  const flushList = () => {
-    if (!list.length) return;
-    const items = [...list];
-    blocks.push(
-      <ul key={`ul-${k++}`} className="my-2 ml-5 list-disc space-y-1">
-        {items.map((it, idx) => (
-          <li key={idx}>{inline(it, `li-${k}-${idx}`)}</li>
-        ))}
-      </ul>,
-    );
-    list = [];
-  };
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx].trimEnd();
 
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-    if (/^\s*[-*]\s+/.test(line)) {
-      list.push(line.replace(/^\s*[-*]\s+/, ""));
+    // --- Tabella GFM: riga con pipe seguita da riga separatore ---
+    if (hasPipe(line) && idx + 1 < lines.length && isTableSep(lines[idx + 1])) {
+      const header = cells(line);
+      const rows: string[][] = [];
+      idx += 2; // salta header + separatore
+      while (idx < lines.length && hasPipe(lines[idx]) && lines[idx].trim() !== "") {
+        rows.push(cells(lines[idx]));
+        idx++;
+      }
+      idx--; // compensa l'incremento del for
+      blocks.push(
+        <div key={`tbl-${k++}`} className="my-3 overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {header.map((h, i) => (
+                  <th key={i} className="px-3 py-2 text-left font-semibold align-top">
+                    {inline(h, `th-${k}-${i}`)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={ri} className="border-b border-border/60">
+                  {r.map((c, ci) => (
+                    <td key={ci} className="px-3 py-2 align-top">
+                      {inline(c, `td-${k}-${ri}-${ci}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
       continue;
     }
-    flushList();
-    if (line.trim() === "") {
+
+    // --- Lista puntata ---
+    if (BULLET.test(line)) {
+      const items: string[] = [];
+      while (idx < lines.length && BULLET.test(lines[idx])) {
+        items.push(lines[idx].replace(BULLET, "").trimEnd());
+        idx++;
+      }
+      idx--;
+      blocks.push(
+        <ul key={`ul-${k++}`} className="my-2 ml-5 list-disc space-y-1">
+          {items.map((it, i) => (
+            <li key={i}>{inline(it, `li-${k}-${i}`)}</li>
+          ))}
+        </ul>,
+      );
       continue;
     }
-    if (line.startsWith("## ")) {
+
+    // --- Lista numerata ---
+    if (ORDERED.test(line)) {
+      const items: string[] = [];
+      while (idx < lines.length && ORDERED.test(lines[idx])) {
+        items.push(lines[idx].replace(ORDERED, "").trimEnd());
+        idx++;
+      }
+      idx--;
+      blocks.push(
+        <ol key={`ol-${k++}`} className="my-2 ml-5 list-decimal space-y-1">
+          {items.map((it, i) => (
+            <li key={i} className="pl-1">{inline(it, `ol-${k}-${i}`)}</li>
+          ))}
+        </ol>,
+      );
+      continue;
+    }
+
+    if (line.trim() === "") continue;
+
+    // --- Heading ---
+    if (line.startsWith("#### ")) {
+      blocks.push(
+        <h4 key={`h-${k++}`} className="mt-3 mb-1 text-sm font-semibold">
+          {inline(line.slice(5), `h4-${k}`)}
+        </h4>,
+      );
+    } else if (line.startsWith("### ")) {
+      blocks.push(
+        <h3 key={`h-${k++}`} className="mt-3.5 mb-1 text-base font-bold">
+          {inline(line.slice(4), `h3-${k}`)}
+        </h3>,
+      );
+    } else if (line.startsWith("## ")) {
       blocks.push(
         <h2 key={`h-${k++}`} className="mt-4 mb-1.5 text-lg font-bold">
           {inline(line.slice(3), `h2-${k}`)}
@@ -78,6 +160,9 @@ export function Markdown({ children }: { children: string }) {
           {inline(line.slice(2), `q-${k}`)}
         </blockquote>,
       );
+    } else if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+      // riga orizzontale --- *** ___
+      blocks.push(<hr key={`hr-${k++}`} className="my-4 border-border" />);
     } else {
       blocks.push(
         <p key={`p-${k++}`} className="my-1.5 leading-relaxed">
@@ -86,9 +171,12 @@ export function Markdown({ children }: { children: string }) {
       );
     }
   }
-  flushList();
 
-  return <div className="text-sm text-foreground">{blocks.map((b, i) => (
-    <Fragment key={i}>{b}</Fragment>
-  ))}</div>;
+  return (
+    <div className="text-sm text-foreground">
+      {blocks.map((b, i) => (
+        <Fragment key={i}>{b}</Fragment>
+      ))}
+    </div>
+  );
 }

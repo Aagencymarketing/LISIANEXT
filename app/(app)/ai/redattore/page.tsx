@@ -8,6 +8,8 @@ import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
+import { Elaborando } from "@/components/ai/Elaborando";
+import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { Markdown } from "@/components/Markdown";
 import { Button, Field, Textarea, Select } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
@@ -154,6 +156,9 @@ function Redattore() {
                 Documenti di riferimento (opzionale)
               </p>
               <FileDrop files={files} onChange={setFiles} />
+              <p className="mt-1.5 text-xs text-muted-2">
+                L&apos;analisi automatica del contenuto dei documenti sarà disponibile a breve.
+              </p>
             </div>
 
             <div className="mt-5">
@@ -178,11 +183,11 @@ function Redattore() {
             </div>
           </div>
 
+          {loading && !output && <Elaborando label="Sto redigendo l'atto…" />}
+
           {output && (
             <div className="card animate-in p-6">
-              <div className="prose-sm whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-foreground">
-                <Markdown>{output}</Markdown>
-              </div>
+              <Markdown>{output}</Markdown>
               {!loading && (
                 <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
                   <span className="inline-flex items-center gap-1.5 text-xs text-success">
@@ -193,10 +198,13 @@ function Redattore() {
                       <User size={13} /> Collegato a {nomeCliente(cliente)} · visibile nello storico
                     </span>
                   )}
-                  <Button variant="secondary" size="sm" onClick={copia}>
-                    {copiato ? <Check size={16} /> : <Copy size={16} />}
-                    {copiato ? "Copiato" : "Copia testo"}
-                  </Button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button variant="secondary" size="sm" onClick={copia}>
+                      {copiato ? <Check size={16} /> : <Copy size={16} />}
+                      {copiato ? "Copiato" : "Copia"}
+                    </Button>
+                    <EsportaButtons titolo={`${tipoAtto} ${oggetto.slice(0, 40)}`} testo={output} />
+                  </div>
                 </div>
               )}
             </div>

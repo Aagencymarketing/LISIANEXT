@@ -35,12 +35,25 @@ function toPayload(ctx?: ContestoAI): ContestoAIPayload | undefined {
  * - Modalità simulata: motore locale (lib/ai/mock).
  * Chiama `onChunk` ad ogni frammento e ritorna il testo completo.
  */
+export interface Turno {
+  ruolo: "utente" | "assistente";
+  contenuto: string;
+}
+
+export interface DocumentoRef {
+  path: string;
+  nome: string;
+  estensione?: string;
+}
+
 export async function streamAI(
   modulo: ModuloAI,
   prompt: string,
   ctx: ContestoAI | undefined,
   onChunk: (testoParziale: string) => void,
   signal?: AbortSignal,
+  storia?: Turno[],
+  documenti?: DocumentoRef[],
 ): Promise<string> {
   if (!AI_COLLEGATO) {
     // --- Simulato ---
@@ -57,7 +70,7 @@ export async function streamAI(
   const res = await fetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ modulo, prompt, contesto: toPayload(ctx) }),
+    body: JSON.stringify({ modulo, prompt, contesto: toPayload(ctx), storia, documenti }),
     signal,
   });
 
