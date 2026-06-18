@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
 import { signInAction, type AuthState } from "@/lib/auth/actions";
 import { Button, Field, Input } from "@/components/ui";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { LogIn, Loader2 } from "lucide-react";
 
 function LoginForm() {
@@ -27,7 +28,7 @@ function LoginForm() {
           <Input type="email" name="email" required autoComplete="email" placeholder="nome@studio.it" />
         </Field>
         <Field label="Password">
-          <Input type="password" name="password" required autoComplete="current-password" placeholder="••••••••" />
+          <PasswordInput name="password" required autoComplete="current-password" placeholder="••••••••" />
         </Field>
 
         {state.error && (

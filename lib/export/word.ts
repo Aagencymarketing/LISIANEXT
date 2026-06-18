@@ -31,6 +31,17 @@ export async function scaricaWord(titolo: string, markdown: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const children: any[] = [];
 
+  // Titolo della domanda/oggetto in cima al documento (per intero).
+  if (titolo && titolo.trim()) {
+    children.push(
+      new Paragraph({
+        spacing: { after: 240 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "CCCCCC" } },
+        children: [new TextRun({ text: titolo.trim(), bold: true, size: 26 })],
+      }),
+    );
+  }
+
   for (const b of parseBlocks(markdown)) {
     if (b.type === "h") {
       children.push(

@@ -204,7 +204,7 @@ function Redattore() {
                       {copiato ? <Check size={16} /> : <Copy size={16} />}
                       {copiato ? "Copiato" : "Copia"}
                     </Button>
-                    <EsportaButtons titolo={`${tipoAtto} ${oggetto.slice(0, 40)}`} testo={output} />
+                    <EsportaButtons titolo={`${tipoAtto} — ${oggetto.trim()}`} testo={output} />
                   </div>
                 </div>
               )}

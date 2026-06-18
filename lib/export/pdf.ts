@@ -44,6 +44,7 @@ export function stampaPDF(titolo: string, markdown: string) {
   @page { size: A4; margin: 22mm 20mm; }
   * { box-sizing: border-box; }
   body { font-family: "Times New Roman", Georgia, serif; font-size: 12pt; line-height: 1.5; color: #111; }
+  .doc-title { font-size: 15pt; font-weight: bold; margin: 0 0 14pt; padding-bottom: 8pt; border-bottom: 1px solid #ccc; }
   h1 { font-size: 16pt; margin: 14pt 0 6pt; }
   h2 { font-size: 13.5pt; margin: 14pt 0 5pt; }
   h3 { font-size: 12pt; margin: 11pt 0 4pt; }
@@ -57,7 +58,7 @@ export function stampaPDF(titolo: string, markdown: string) {
   th { background: #f0f0f0; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head>
-<body>${blocksHtml(markdown)}</body></html>`;
+<body>${titolo && titolo.trim() ? `<div class="doc-title">${esc(titolo.trim())}</div>` : ""}${blocksHtml(markdown)}</body></html>`;
 
   const w = window.open("", "_blank", "width=900,height=1000");
   if (!w) {

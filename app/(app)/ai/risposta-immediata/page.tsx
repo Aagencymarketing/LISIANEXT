@@ -195,7 +195,7 @@ function Chat() {
               </select>
             </div>
             {!vuota && messaggi.length > 0 && (
-              <EsportaButtons titolo={messaggi[0]?.contenuto.slice(0, 50) || "Conversazione"} testo={trascrizione} />
+              <EsportaButtons titolo={messaggi[0]?.contenuto || "Conversazione"} testo={trascrizione} />
             )}
             <button
               onClick={nuova}

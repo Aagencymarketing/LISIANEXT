@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { signUpAction, type AuthState } from "@/lib/auth/actions";
 import { Button, Field, Input } from "@/components/ui";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { UserPlus, Loader2, CheckCircle2 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -31,7 +32,7 @@ export default function RegisterPage() {
             <Input type="email" name="email" required autoComplete="email" placeholder="nome@studio.it" />
           </Field>
           <Field label="Password" hint="Almeno 6 caratteri">
-            <Input type="password" name="password" required autoComplete="new-password" placeholder="••••••••" />
+            <PasswordInput name="password" required autoComplete="new-password" placeholder="••••••••" />
           </Field>
 
           {state.error && (

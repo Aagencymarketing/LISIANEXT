@@ -184,7 +184,7 @@ export default function PareriPage() {
                       {copiato ? <Check size={16} /> : <Copy size={16} />}
                       {copiato ? "Copiato" : "Copia"}
                     </Button>
-                    <EsportaButtons titolo={quesito.slice(0, 60) || "Parere"} testo={output} />
+                    <EsportaButtons titolo={quesito.trim() || "Parere"} testo={output} />
                   </div>
                 </div>
               )}
