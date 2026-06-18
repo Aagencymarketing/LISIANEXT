@@ -179,14 +179,14 @@ function Chat() {
             <MessageSquare size={18} className="text-primary" />
             <h1 className="text-lg font-semibold">Risposta immediata</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             {/* Collega a cliente */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1">
-              <Link2 size={14} className="text-muted-2" />
+            <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1">
+              <Link2 size={14} className="shrink-0 text-muted-2" />
               <select
                 value={clienteId || ""}
                 onChange={(e) => collega(e.target.value || undefined)}
-                className="max-w-[150px] bg-transparent text-sm outline-none"
+                className="min-w-0 max-w-[150px] bg-transparent text-sm outline-none"
               >
                 <option value="">Nessun cliente</option>
                 {clienti.map((c) => (
