@@ -14,6 +14,7 @@ import { CausaForm, type CausaDraft } from "@/components/gestionale/CausaForm";
 import { AttivitaForm, type AttivitaDraft } from "@/components/gestionale/AttivitaForm";
 import { ClienteAI } from "@/components/gestionale/ClienteAI";
 import { AnalizzaEsegui } from "@/components/gestionale/AnalizzaEsegui";
+import { PraticaFolder } from "@/components/gestionale/PraticaFolder";
 import { useUser } from "@/lib/auth/useUser";
 import {
   uploadDocumento,
@@ -85,6 +86,8 @@ export default function ClienteDetailPage() {
   const [attOpen, setAttOpen] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [aeOpen, setAeOpen] = useState(false);
+  const [aeCausa, setAeCausa] = useState<string | undefined>(undefined);
+  const apriAnalizza = (causaId?: string) => { setAeCausa(causaId); setAeOpen(true); };
   // draft buffers
   const [editDraft, setEditDraft] = useState<ClienteDraft | null>(null);
   const [editValido, setEditValido] = useState(false);
@@ -262,7 +265,7 @@ export default function ClienteDetailPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => setAeOpen(true)}>
+            <Button size="sm" onClick={() => apriAnalizza(undefined)}>
               <Sparkles size={15} /> Analizza ed esegui
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
@@ -338,48 +341,18 @@ export default function ClienteDetailPage() {
             <Button size="sm" onClick={() => setCausaOpen(true)}><Plus size={16} /> Nuova pratica</Button>
           </div>
           {cliente.cause.length === 0 ? (
-            <EmptyState icon={<Gavel size={24} />} title="Nessuna pratica" description="Aggiungi la prima pratica per questo cliente."
+            <EmptyState icon={<Gavel size={24} />} title="Nessuna pratica" description="Aggiungi la prima pratica (es. “Armani c. Palmacci”): è la sottocartella che conterrà i suoi pareri, atti e documenti."
               action={<Button size="sm" onClick={() => setCausaOpen(true)}><Plus size={16} /> Nuova pratica</Button>} />
           ) : (
             cliente.cause.map((c) => (
-              <div key={c.id} className="card p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold">{c.oggetto}</h3>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-2">
-                      <Badge tone={STATO_CAUSA[c.stato].tone}>{STATO_CAUSA[c.stato].label}</Badge>
-                      <Badge tone="blue">{MATERIA_CAUSA[c.materia]}</Badge>
-                      {c.numeroRuolo && <span>{c.numeroRuolo}</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={c.stato}
-                      onChange={(e) => updateCausa(cliente.id, c.id, { stato: e.target.value as never })}
-                      className="h-9 w-auto py-1.5 text-xs"
-                    >
-                      {Object.entries(STATO_CAUSA).map(([k, v]) => (
-                        <option key={k} value={k}>{v.label}</option>
-                      ))}
-                    </Select>
-                    <button onClick={() => removeCausa(cliente.id, c.id)} className="rounded-lg p-2 text-muted-2 hover:text-danger" aria-label="Elimina pratica">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-                  {c.controparte && <Info label="Controparte" value={c.controparte} />}
-                  {c.foro && <Info label="Foro" value={c.foro} />}
-                  {c.valore != null && <Info label="Valore" value={formatEuro(c.valore)} />}
-                  {c.prossimaUdienza && <Info label="Prossima udienza" value={formatData(c.prossimaUdienza)} />}
-                </div>
-                {c.note && <p className="mt-3 rounded-lg bg-surface-2 p-3 text-sm text-muted">{c.note}</p>}
-                <div className="mt-4 flex gap-2 border-t border-border pt-3">
-                  <Link href={`/ai/redattore?cliente=${cliente.id}&causa=${c.id}`}>
-                    <Button variant="soft" size="sm"><Pencil size={14} /> Redigi atto</Button>
-                  </Link>
-                </div>
-              </div>
+              <PraticaFolder
+                key={c.id}
+                cliente={cliente}
+                causa={c}
+                onAnalizza={apriAnalizza}
+                onScaricaDoc={scaricaDoc}
+                onEliminaDoc={eliminaDoc}
+              />
             ))
           )}
         </div>
@@ -431,7 +404,7 @@ export default function ClienteDetailPage() {
       )}
 
       {/* ---- MODALI ---- */}
-      <AnalizzaEsegui cliente={cliente} open={aeOpen} onClose={() => setAeOpen(false)} />
+      <AnalizzaEsegui cliente={cliente} open={aeOpen} onClose={() => setAeOpen(false)} causaIniziale={aeCausa} />
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Modifica cliente"
         footer={<><Button variant="secondary" onClick={() => setEditOpen(false)}>Annulla</Button><Button onClick={salvaModifica} disabled={!editValido}>Salva</Button></>}>

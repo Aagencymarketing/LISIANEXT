@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/lib/store";
 import { streamAI, type DocumentoRef, type VarianteParere } from "@/lib/ai/client";
 import { Markdown } from "@/components/Markdown";
@@ -25,10 +25,12 @@ export function AnalizzaEsegui({
   cliente,
   open,
   onClose,
+  causaIniziale,
 }: {
   cliente: Cliente;
   open: boolean;
   onClose: () => void;
+  causaIniziale?: string;
 }) {
   const addConversazione = useApp((s) => s.addConversazione);
   const addCronologia = useApp((s) => s.addCronologia);
@@ -38,7 +40,12 @@ export function AnalizzaEsegui({
   const [tipoAtto, setTipoAtto] = useState<string>(TIPI_ATTO[0]);
   const [tipoAttoCustom, setTipoAttoCustom] = useState("");
   const tipoAttoEff = tipoAtto === "Altro" ? (tipoAttoCustom.trim() || "Atto") : tipoAtto;
-  const [causaId, setCausaId] = useState<string | undefined>(cliente.cause[0]?.id);
+  const [causaId, setCausaId] = useState<string | undefined>(causaIniziale ?? cliente.cause[0]?.id);
+
+  // Quando si apre con una pratica specifica, preselezionala.
+  useEffect(() => {
+    if (open && causaIniziale) setCausaId(causaIniziale);
+  }, [open, causaIniziale]);
   const [istruzioni, setIstruzioni] = useState("");
   const docAnalizzabili = useMemo(
     () => cliente.documenti.filter((d) => d.storagePath && ANALIZZABILI.includes(d.estensione.toLowerCase())),
