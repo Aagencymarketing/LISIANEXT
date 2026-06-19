@@ -1,31 +1,56 @@
 import type { SentenzaRisultato } from "../types";
 
 // ============================================================
-// PUNTO DI AGGANCIO — DATABASE SENTENZE ESTERNO
+// PUNTO DI AGGANCIO — DATABASE SENTENZE ESTERNO (Lisia)
 // ------------------------------------------------------------
-// Questo è il database ESTERNO (6.5M+ sentenze reali, aggiornato
-// ogni 24h) di proprietà di LisiaNext. NON è il nostro DB
-// gestionale. Verrà collegato dal vecchio sviluppatore.
-//
-// Per collegarlo davvero basterà sostituire il corpo di
-// `cercaSentenze` con una fetch all'endpoint reale, es:
-//
-//   const res = await fetch(`${process.env.SENTENZE_API_URL}/search`, {
-//     method: "POST",
-//     headers: { Authorization: `Bearer ${process.env.SENTENZE_API_KEY}` },
-//     body: JSON.stringify({ query, filtri }),
-//   });
-//   return (await res.json()).risultati;
-//
-// La firma della funzione resta invariata, così il resto della
-// piattaforma (ricerche, gestionale, AI) non va toccato.
+// DB ESTERNO (6.5M+ sentenze reali) interrogato via la nostra
+// route server `/api/sentenze` (che tiene la chiave segreta e
+// chiama aiapi.lisia.it con header `Authorization: ApiKey ...`).
+// Modalità reale attiva quando NEXT_PUBLIC_SENTENZE_COLLEGATO="true"
+// e la chiave è impostata lato server; altrimenti modalità simulata.
 // ============================================================
 
-export const SENTENZE_COLLEGATO = false; // diventerà true quando l'API reale è attiva
+export const SENTENZE_COLLEGATO =
+  process.env.NEXT_PUBLIC_SENTENZE_COLLEGATO === "true";
 
 export interface FiltriSentenze {
   materia?: string;
   soloMassime?: boolean;
+}
+
+export interface MetadatiSentenze {
+  number?: string | number;
+  year?: string | number;
+  place?: string;
+  region?: string;
+  issuer?: string;
+  area?: string;
+  section?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+/** Chiamata alla route server di ricerca sentenze. */
+async function chiamaRoute(body: unknown): Promise<SentenzaRisultato[]> {
+  const res = await fetch("/api/sentenze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.error || `Errore ricerca (${res.status})`);
+  }
+  const j = await res.json();
+  return (j.risultati ?? []) as SentenzaRisultato[];
+}
+
+/** Ricerca per estremi (numero, anno, sede, organo...). Solo modalità reale. */
+export async function cercaSentenzePerEstremi(
+  metadati: MetadatiSentenze,
+): Promise<SentenzaRisultato[]> {
+  if (!SENTENZE_COLLEGATO) return [];
+  return chiamaRoute({ mode: "metadata", metadati, size: 20 });
 }
 
 const POOL: SentenzaRisultato[] = [
@@ -95,13 +120,24 @@ export function getSentenzaById(id: string): SentenzaRisultato | undefined {
 }
 
 /**
- * Ricerca nel database sentenze.
- * (STUB simulato — vedi nota in cima al file per il collegamento reale.)
+ * Ricerca a testo libero nel database sentenze (modalità content).
+ * Reale via `/api/sentenze` se collegato; altrimenti simulata sul POOL.
  */
 export async function cercaSentenze(
   query: string,
   filtri: FiltriSentenze = {},
 ): Promise<SentenzaRisultato[]> {
+  if (SENTENZE_COLLEGATO) {
+    let risultati = await chiamaRoute({ mode: "content", query, size: 10 });
+    if (filtri.materia) {
+      risultati = risultati.filter(
+        (s) => s.materia.toLowerCase() === filtri.materia!.toLowerCase(),
+      );
+    }
+    return risultati;
+  }
+
+  // --- Simulato ---
   await new Promise((r) => setTimeout(r, 650));
   let risultati = POOL.map((s) => ({ ...s, rilevanza: scorePerQuery(query, s) }));
   if (filtri.materia) {

@@ -130,8 +130,12 @@ export interface SentenzaRisultato {
   data: string;
   materia: string;
   massima: string;
-  rilevanza: number; // 0..1 score simulato
+  rilevanza: number; // 0..1 (relativo, da `score` in modalità content; 0 in metadata)
   fonte: string;
+  // --- campi dal DB sentenze reale (opzionali, retro-compatibili) ---
+  rulingId?: string; // id univoco della sentenza (document.ruling_id) per dedup/preferiti
+  testoCompleto?: string; // sentenza integrale (document.ruling_full_text)
+  tipo?: string; // sentenza | ordinanza | decreto (ruling_item_type)
 }
 
 // Helper di visualizzazione
