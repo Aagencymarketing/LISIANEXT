@@ -62,14 +62,14 @@ export async function POST(req: Request) {
     const refine = estraiJson<{ query?: string; materia?: string }>(aText) || {};
     const query = (refine.query || "").trim() || testoBreve.slice(0, 300);
 
-    // --- Step B: ricerca sentenze reali ---
-    const { risultati } = await searchSentenze({
-      mode: "content",
-      query_type: "sentenza",
-      query,
-      size: 8,
-      offset: 0,
-    });
+    // --- Step B: ricerca sentenze reali (con filtro materia "duro") ---
+    const area = (refine.materia || body.materia || "").toString().toLowerCase().trim();
+    const base = { mode: "content", query_type: "sentenza", query, size: 8, offset: 0 };
+    let { risultati } = await searchSentenze(area ? { ...base, area } : base);
+    // fallback: se il filtro materia azzera i risultati, riprova senza filtro
+    if (risultati.length === 0 && area) {
+      ({ risultati } = await searchSentenze(base));
+    }
     if (risultati.length === 0) return Response.json({ risultati: [] });
 
     // --- Step C: filtro di pertinenza ---
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       model: MODELLO_AUX,
       max_tokens: 1200,
       system:
-        "Sei un giurista che valuta la PERTINENZA di estratti di sentenze rispetto a un testo legale (parere/atto). Una sentenza è pertinente SOLO se riguarda lo stesso istituto/questione ed è realmente utile a sostegno o a contrasto della tesi; scarta quelle fuori tema o solo genericamente attinenti. Rispondi SOLO con un JSON array, un oggetto per estratto: [{\"i\": indice, \"pertinente\": true|false, \"nota\": \"max 14 parole sul perché è rilevante\"}].",
+        "Sei un giurista che valuta con SEVERITÀ la pertinenza di estratti di sentenze rispetto a un testo legale (parere/atto). Una sentenza è pertinente SOLO se affronta la STESSA specifica questione giuridica del testo (stesso istituto E stesso profilo concreto) ed è direttamente utile a sostegno o a contrasto della tesi. NON basta la stessa materia o un'attinenza generica: in caso di dubbio, scartala (pertinente=false). Meglio poche sentenze davvero centrate che molte vaghe. Rispondi SOLO con un JSON array, un oggetto per estratto: [{\"i\": indice, \"pertinente\": true|false, \"nota\": \"max 14 parole sul perché è davvero pertinente\"}].",
       messages: [
         {
           role: "user",

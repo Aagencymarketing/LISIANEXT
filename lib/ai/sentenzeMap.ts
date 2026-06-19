@@ -7,6 +7,13 @@ import type { SentenzaRisultato } from "@/lib/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// valori-segnaposto del DB da trattare come "vuoto"
+const PLACEHOLDER = new Set(["", "nd", "n.d.", "n/d", "na", "-", "x", "sconosciuto", "sconosciuta", "null"]);
+function pulito(v?: string | number): string {
+  const s = (v ?? "").toString().trim();
+  return PLACEHOLDER.has(s.toLowerCase()) ? "" : s;
+}
+
 function cap(s?: string): string {
   if (!s) return "";
   return s
@@ -34,37 +41,43 @@ function dataEstesa(iso?: string): string {
 /** Costruisce gli estremi nel formato forense, es. "Corte di Cassazione di Roma, Sez. L, 10 febbraio 2015, n. 2544". */
 function buildEstremi(item: any): string {
   const doc = item?.document ?? {};
-  const organo = cap(item?.document_emanante || doc.ruling_issuer_type || "");
-  const sede = item?.document_place || doc.ruling_town || item?.document_region || doc.ruling_region || "";
-  const sezione = item?.document_sezione || doc.ruling_section || "";
+  const organo = cap(pulito(item?.document_emanante || doc.ruling_issuer_type));
+  const sede = pulito(item?.document_place || doc.ruling_town || item?.document_region || doc.ruling_region);
+  const sezione = pulito(item?.document_sezione || doc.ruling_section);
   const numero = doc.ruling_number ?? item?.sent_numero;
   const anno = doc.ruling_year ?? item?.sent_anno;
-  const tipo = (doc.ruling_item_type || "").toLowerCase();
+  const tipo = (doc.ruling_item_type || "sentenza").toLowerCase();
   const data = dataEstesa(dataIso(item));
 
-  const testa = organo + (sede ? ` di ${cap(sede)}` : "");
-  const parti = [testa];
+  const parti: string[] = [];
+  const testa = organo ? organo + (sede ? ` di ${cap(sede)}` : "") : "";
+  if (testa) parti.push(testa);
   if (sezione) parti.push(`Sez. ${sezione}`);
   if (data) parti.push(data);
+  let estremi = parti.join(", ");
   const tipoLabel = tipo && tipo !== "sentenza" ? `${tipo} ` : "";
-  const coda = numero != null ? `, ${tipoLabel}n. ${numero}${anno ? `/${anno}` : ""}` : "";
-  return parti.join(", ") + coda;
+  if (numero != null) {
+    const numStr = `${tipoLabel}n. ${numero}${anno ? `/${anno}` : ""}`;
+    estremi = estremi ? `${estremi}, ${numStr}` : cap(numStr);
+  }
+  // se non c'era né organo né data: prefisso minimo
+  return estremi || `Provvedimento ${numero ?? ""}`.trim();
 }
 
 function mapItem(item: any): SentenzaRisultato {
   const doc = item?.document ?? {};
   const rulingId = doc.ruling_id != null ? String(doc.ruling_id) : String(item?.id ?? "");
-  const organo = cap(item?.document_emanante || doc.ruling_issuer_type || "");
-  const sede = item?.document_place || doc.ruling_town || "";
+  const organo = cap(pulito(item?.document_emanante || doc.ruling_issuer_type));
+  const sede = pulito(item?.document_place || doc.ruling_town);
   return {
     id: rulingId,
     rulingId,
     estremi: buildEstremi(item),
     data: dataIso(item),
-    materia: cap(item?.document_area || doc.ruling_law_type || ""),
+    materia: cap(pulito(item?.document_area || doc.ruling_law_type)),
     massima: (item?.document_text || "").trim(),
     rilevanza: typeof item?.score === "number" ? item.score : 0, // normalizzato dopo, vedi mapRisposta
-    fonte: organo + (sede ? ` · ${cap(sede)}` : ""),
+    fonte: organo ? organo + (sede ? ` · ${cap(sede)}` : "") : "",
     testoCompleto: doc.ruling_full_text || undefined,
     tipo: doc.ruling_item_type || undefined,
   };
