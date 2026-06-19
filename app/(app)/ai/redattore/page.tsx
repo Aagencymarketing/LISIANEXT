@@ -29,6 +29,8 @@ function Redattore() {
   const toggleAiPanel = useApp((s) => s.toggleAiPanel);
 
   const [tipoAtto, setTipoAtto] = useState<string>(TIPI_ATTO[0]);
+  const [tipoAttoCustom, setTipoAttoCustom] = useState("");
+  const tipoAttoEff = tipoAtto === "Altro" ? (tipoAttoCustom.trim() || "Atto") : tipoAtto;
   const [oggetto, setOggetto] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [clienteId, setClienteId] = useState<string | undefined>(params.get("cliente") || undefined);
@@ -64,15 +66,15 @@ function Redattore() {
   const genera = async () => {
     if (!oggetto.trim()) return;
     setConvId(undefined);
-    addCronologia({ testo: `${tipoAtto} — ${oggetto.slice(0, 80)}`, tipo: "Atto" });
-    const testo = await run(oggetto, { cliente, causa, tipoAtto });
+    addCronologia({ testo: `${tipoAttoEff} — ${oggetto.slice(0, 80)}`, tipo: "Atto" });
+    const testo = await run(oggetto, { cliente, causa, tipoAtto: tipoAttoEff });
     if (testo) {
       const id = uuid();
       setConvId(id);
       const conv: ConversazioneAI = {
         id,
         modulo: "redattore",
-        titolo: `${tipoAtto} — ${oggetto.slice(0, 70)}`,
+        titolo: `${tipoAttoEff} — ${oggetto.slice(0, 70)}`,
         messaggi: [
           { id: uid("m"), ruolo: "utente", contenuto: oggetto, createdAt: oggi() },
           { id: uid("m"), ruolo: "assistente", contenuto: testo, createdAt: oggi() },
@@ -141,6 +143,14 @@ function Redattore() {
                 <option key={t} value={t}>{t}</option>
               ))}
             </Select>
+            {tipoAtto === "Altro" && (
+              <input
+                value={tipoAttoCustom}
+                onChange={(e) => setTipoAttoCustom(e.target.value)}
+                placeholder="Specifica il tipo di atto (es. Ricorso ex art. 700 c.p.c.)"
+                className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-[var(--ring)]"
+              />
+            )}
 
             <div className="mt-5">
               <Field label="Oggetto e istruzioni">
@@ -205,7 +215,7 @@ function Redattore() {
                       {copiato ? <Check size={16} /> : <Copy size={16} />}
                       {copiato ? "Copiato" : "Copia"}
                     </Button>
-                    <EsportaButtons titolo={`${tipoAtto} — ${oggetto.trim()}`} testo={output} />
+                    <EsportaButtons titolo={`${tipoAttoEff} — ${oggetto.trim()}`} testo={output} />
                   </div>
                 </div>
               )}

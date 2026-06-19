@@ -11,7 +11,7 @@ import { ConversazioniDrawer } from "@/components/ai/ConversazioniDrawer";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
-import { uid, uuid, oggi } from "@/lib/utils";
+import { uid, uuid, oggi, primoNome } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
 import { Sparkles, Send, Plus, Square, MessageSquare, Link2, PanelRight } from "lucide-react";
 
@@ -30,7 +30,7 @@ function Chat() {
   const aiPanelOpen = useApp((s) => s.aiPanelOpen);
   const toggleAiPanel = useApp((s) => s.toggleAiPanel);
   const { user } = useUser();
-  const saluto = user?.nome || "Avvocato";
+  const saluto = primoNome(user?.nome);
 
   const [messaggi, setMessaggi] = useState<MessaggioChat[]>([]);
   const [streaming, setStreaming] = useState("");
@@ -180,7 +180,7 @@ function Chat() {
         <div className="mb-3 hidden flex-wrap items-center justify-between gap-2 lg:flex">
           <div className="flex items-center gap-2">
             <MessageSquare size={18} className="text-primary" />
-            <h1 className="text-lg font-semibold">Risposta immediata</h1>
+            <h1 className="text-lg font-semibold">Risposte interattive</h1>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1">
@@ -257,9 +257,9 @@ function Chat() {
               <h2 className="hidden text-2xl font-bold lg:block">
                 Ciao, <span className="text-primary">{saluto}</span>
               </h2>
-              <p className="mt-1 hidden text-muted lg:block">Come posso aiutarti oggi nella tua ricerca giuridica?</p>
+              <p className="mt-1 hidden text-muted lg:block">Cosa posso fare per te oggi?</p>
               {/* Mobile: identità della sezione */}
-              <h2 className="text-2xl font-bold lg:hidden">Risposta immediata</h2>
+              <h2 className="text-2xl font-bold lg:hidden">Risposte interattive</h2>
               <p className="mt-1 text-muted lg:hidden">Risposte rapide e puntuali ai tuoi quesiti giuridici: scrivi una domanda qui sotto.</p>
               <div className="mt-6 w-full space-y-2">
                 {ESEMPI.map((e) => (
@@ -314,7 +314,7 @@ function Chat() {
               }
             }}
             rows={1}
-            placeholder="Scrivi la tua domanda giuridica..."
+            placeholder="Approfondisci l'argomento..."
             className="max-h-40 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-2"
           />
           {loading ? (

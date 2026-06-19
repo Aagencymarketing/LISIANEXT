@@ -29,7 +29,7 @@ export const NAV_MAIN: NavItem[] = [
     href: "/ai",
     icon: Sparkles,
     children: [
-      { label: "Risposta immediata", href: "/ai/risposta-immediata", icon: MessageSquare },
+      { label: "Risposte interattive", href: "/ai/risposta-immediata", icon: MessageSquare },
       { label: "Pareri approfonditi", href: "/ai/pareri", icon: FileSearch },
       { label: "Redattore atti", href: "/ai/redattore", icon: PenLine },
     ],

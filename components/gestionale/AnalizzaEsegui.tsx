@@ -36,6 +36,8 @@ export function AnalizzaEsegui({
   const [azione, setAzione] = useState<ModuloAI>("pareri");
   const [variante, setVariante] = useState<VarianteParere>("completo");
   const [tipoAtto, setTipoAtto] = useState<string>(TIPI_ATTO[0]);
+  const [tipoAttoCustom, setTipoAttoCustom] = useState("");
+  const tipoAttoEff = tipoAtto === "Altro" ? (tipoAttoCustom.trim() || "Atto") : tipoAtto;
   const [causaId, setCausaId] = useState<string | undefined>(cliente.cause[0]?.id);
   const [istruzioni, setIstruzioni] = useState("");
   const docAnalizzabili = useMemo(
@@ -88,7 +90,7 @@ export function AnalizzaEsegui({
   const titoloPer = () => {
     const base = causa?.oggetto || nome;
     if (azione === "pareri") return `Parere — ${base}`;
-    if (azione === "redattore") return `${tipoAtto} — ${base}`;
+    if (azione === "redattore") return `${tipoAttoEff} — ${base}`;
     return (istruzioni.trim().slice(0, 70) || `Analisi posizione — ${nome}`);
   };
 
@@ -108,7 +110,7 @@ export function AnalizzaEsegui({
       testo = await streamAI(
         azione,
         prompt,
-        { cliente, causa, tipoAtto: azione === "redattore" ? tipoAtto : undefined },
+        { cliente, causa, tipoAtto: azione === "redattore" ? tipoAttoEff : undefined },
         (parziale) => setOutput(parziale),
         ac.signal,
         undefined,
@@ -213,6 +215,14 @@ export function AnalizzaEsegui({
               <Select value={tipoAtto} onChange={(e) => setTipoAtto(e.target.value)}>
                 {TIPI_ATTO.map((t) => <option key={t} value={t}>{t}</option>)}
               </Select>
+              {tipoAtto === "Altro" && (
+                <input
+                  value={tipoAttoCustom}
+                  onChange={(e) => setTipoAttoCustom(e.target.value)}
+                  placeholder="Specifica il tipo di atto"
+                  className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-[var(--ring)]"
+                />
+              )}
             </div>
           )}
 

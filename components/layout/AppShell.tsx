@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useApp } from "@/lib/store";
@@ -8,6 +9,12 @@ import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Chiudi il menu mobile a ogni cambio pagina (evita overlay "appiccicati").
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
   const theme = useApp((s) => s.theme);
   const hydrated = useApp((s) => s.hasHydrated);
   const hydrateFromSupabase = useApp((s) => s.hydrateFromSupabase);

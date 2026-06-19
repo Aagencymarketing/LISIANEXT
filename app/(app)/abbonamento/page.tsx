@@ -7,7 +7,7 @@ const PIANI = [
   {
     nome: "Base",
     prezzo: "29",
-    feat: ["Risposta immediata", "Ricerche legali", "Fino a 20 clienti", "Cronologia 30 giorni"],
+    feat: ["Risposte interattive", "Ricerche legali", "Fino a 20 clienti", "Cronologia 30 giorni"],
   },
   {
     nome: "Studio",

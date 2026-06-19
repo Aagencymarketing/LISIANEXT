@@ -67,3 +67,11 @@ export function formatEuro(n?: number): string {
 export function oggi(): string {
   return new Date().toISOString();
 }
+
+/** Nome di battesimo da un nome completo, togliendo i titoli (Avv., Dott., ...). */
+export function primoNome(nomeCompleto?: string): string {
+  if (!nomeCompleto) return "Avvocato";
+  const titoli = /^(avv\.?(ssa)?|avvocat[oa]|dott\.?(ssa)?|dottor(essa)?|prof\.?(ssa)?)\s+/i;
+  const pulito = nomeCompleto.trim().replace(titoli, "");
+  return pulito.split(/\s+/)[0] || nomeCompleto.trim();
+}

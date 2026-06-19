@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { useUser } from "@/lib/auth/useUser";
-import { formatData } from "@/lib/utils";
+import { formatData, primoNome } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import {
   Sparkles,
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const cronologia = useApp((s) => s.cronologia);
   const preferiti = useApp((s) => s.preferiti);
   const { user } = useUser();
-  const saluto = user?.nome || "Avvocato";
+  const saluto = primoNome(user?.nome);
 
   const causeAttive = clienti.reduce(
     (acc, c) =>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
           Ciao, <span className="text-primary">{saluto}</span>
         </h1>
         <p className="mt-2 text-lg text-muted">
-          Come posso aiutarti oggi nella tua ricerca giuridica?
+          Cosa posso fare per te oggi?
         </p>
 
         <form

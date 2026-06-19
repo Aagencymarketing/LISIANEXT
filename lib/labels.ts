@@ -52,4 +52,5 @@ export const TIPI_ATTO = [
   "Ricorso per cassazione",
   "Contratto",
   "Parere motivato",
+  "Altro",
 ] as const;
