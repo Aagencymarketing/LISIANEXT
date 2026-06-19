@@ -136,6 +136,7 @@ export interface SentenzaRisultato {
   rulingId?: string; // id univoco della sentenza (document.ruling_id) per dedup/preferiti
   testoCompleto?: string; // sentenza integrale (document.ruling_full_text)
   tipo?: string; // sentenza | ordinanza | decreto (ruling_item_type)
+  nota?: string; // nota di pertinenza (perché è rilevante) — da Fase 3
 }
 
 // Helper di visualizzazione

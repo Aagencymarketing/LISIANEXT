@@ -10,6 +10,7 @@ import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { ConversazioniDrawer } from "@/components/ai/ConversazioniDrawer";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
+import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { nomeCliente, type MessaggioChat, type ConversazioneAI } from "@/lib/types";
 import { Sparkles, Send, Plus, Square, MessageSquare, Link2, PanelRight } from "lucide-react";
@@ -169,6 +170,7 @@ function Chat() {
   const trascrizione = messaggi
     .map((m) => (m.ruolo === "utente" ? `## Domanda\n\n${m.contenuto}` : `## Risposta\n\n${m.contenuto}`))
     .join("\n\n");
+  const ultimaRisposta = [...messaggi].reverse().find((m) => m.ruolo === "assistente");
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] gap-5">
@@ -287,6 +289,9 @@ function Chat() {
                     />
                   ))}
                 </div>
+              )}
+              {!loading && !streaming && ultimaRisposta && (
+                <PrecedentiPertinenti key={ultimaRisposta.id} testo={ultimaRisposta.contenuto} leggera />
               )}
             </div>
           )}

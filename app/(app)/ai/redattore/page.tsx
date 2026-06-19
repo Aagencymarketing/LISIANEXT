@@ -11,6 +11,7 @@ import { ConversazioniDrawer } from "@/components/ai/ConversazioniDrawer";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
+import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
 import { Markdown } from "@/components/Markdown";
 import { Button, Field, Textarea, Select } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
@@ -208,6 +209,7 @@ function Redattore() {
                   </div>
                 </div>
               )}
+              {!loading && <PrecedentiPertinenti testo={output} materia={causa?.materia} />}
             </div>
           )}
          </div>

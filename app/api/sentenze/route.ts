@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { mapRisposta } from "@/lib/ai/sentenzeMap";
+import { searchSentenze, sentenzeConfigurato } from "@/lib/ai/sentenzeServer";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -33,9 +33,7 @@ export async function POST(req: Request) {
   if (!user) return Response.json({ error: "Non autorizzato" }, { status: 401 });
 
   // 2) Configurazione presente?
-  const KEY = process.env.SENTENZE_API_KEY;
-  const URL = process.env.SENTENZE_API_URL;
-  if (!KEY || !URL) {
+  if (!sentenzeConfigurato()) {
     return Response.json({ error: "Banca dati sentenze non configurata." }, { status: 503 });
   }
 
@@ -66,24 +64,10 @@ export async function POST(req: Request) {
 
   // 5) Chiamata all'API esterna sentenze
   try {
-    const res = await fetch(`${URL.replace(/\/$/, "")}/api/search`, {
-      method: "POST",
-      headers: {
-        Authorization: `ApiKey ${KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      console.error("[api/sentenze] upstream", res.status, t.slice(0, 300));
-      return Response.json({ error: "Banca dati non disponibile, riprova." }, { status: 502 });
-    }
-    const json = await res.json();
-    const { risultati, total } = mapRisposta(json);
+    const { risultati, total } = await searchSentenze(payload);
     return Response.json({ risultati, total }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("[api/sentenze]", e);
-    return Response.json({ error: "Errore nella ricerca sentenze." }, { status: 502 });
+    return Response.json({ error: "Banca dati non disponibile, riprova." }, { status: 502 });
   }
 }

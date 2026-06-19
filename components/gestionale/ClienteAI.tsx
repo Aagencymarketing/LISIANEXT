@@ -88,7 +88,7 @@ export function ClienteAI({ cliente }: { cliente: Cliente }) {
               Precedenti suggeriti dal database sentenze (anteprima — DB reale 6,5M+ in fase di collegamento)
             </div>
             {precedenti.map((s) => {
-              const fav = preferiti.includes(s.id);
+              const fav = preferiti.some((p) => p.id === s.id);
               return (
                 <div key={s.id} className="rounded-xl border border-border bg-surface-2 p-3.5">
                   <div className="flex items-start justify-between gap-2">
@@ -96,7 +96,7 @@ export function ClienteAI({ cliente }: { cliente: Cliente }) {
                     <div className="flex items-center gap-2">
                       <Badge tone="green">{Math.round(s.rilevanza * 100)}%</Badge>
                       <button
-                        onClick={() => togglePreferito(s.id)}
+                        onClick={() => togglePreferito(s)}
                         className={fav ? "text-amber-500" : "text-muted-2 hover:text-amber-500"}
                         aria-label="Preferito"
                       >

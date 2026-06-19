@@ -92,13 +92,15 @@ export function mapRisposta(json: any): { risultati: SentenzaRisultato[]; total:
     .sort((a, b) => b.score - a.score)
     .map((x) => mapItem(x.item));
 
-  // dedup secondaria per estremi (stessa sentenza con ruling_id diversi nel DB),
-  // tenendo la prima occorrenza (già ordinata per score).
-  const vistiEstremi = new Set<string>();
+  // dedup secondaria (stessa sentenza con ruling_id diversi nel DB), per
+  // organo+sede + "n. numero/anno" (ignorando la sezione, che a volte varia).
+  const visti = new Set<string>();
   mappati = mappati.filter((m) => {
-    const k = m.estremi.toLowerCase().replace(/\s+/g, " ").trim();
-    if (!k || vistiEstremi.has(k)) return false;
-    vistiEstremi.add(k);
+    const organoSede = m.estremi.split(",")[0]?.toLowerCase().trim() || "";
+    const num = (m.estremi.match(/n\.\s*\d+\/\d+/i) || [""])[0].toLowerCase();
+    const k = `${organoSede}|${num}`;
+    if (k === "|" || visti.has(k)) return false;
+    visti.add(k);
     return true;
   });
 

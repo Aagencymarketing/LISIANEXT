@@ -9,6 +9,7 @@ import type {
   Documento,
   ConversazioneAI,
   VoceCronologia,
+  SentenzaRisultato,
 } from "./types";
 import { CLIENTI_SEED } from "./seed";
 import { uuid, oggi } from "./utils";
@@ -34,7 +35,7 @@ interface AppState {
   clienti: Cliente[];
   conversazioni: ConversazioneAI[];
   cronologia: VoceCronologia[];
-  preferiti: string[];
+  preferiti: SentenzaRisultato[];
   dataLoaded: boolean;
 
   // ---- UI (persistite in localStorage) ----
@@ -78,7 +79,7 @@ interface AppState {
   updateConversazione: (id: string, patch: Partial<ConversazioneAI>) => void;
   removeConversazione: (id: string) => void;
   addCronologia: (v: Omit<VoceCronologia, "id" | "createdAt">) => void;
-  togglePreferito: (id: string) => void;
+  togglePreferito: (sentenza: SentenzaRisultato) => void;
 
   // ---- UI azioni ----
   setTheme: (t: Theme) => void;
@@ -124,7 +125,7 @@ export const useApp = create<AppState>()(
         const [clienti, cronologia, preferiti, conversazioni] = await Promise.all([
           safe(gdb.caricaClienti(), [] as Cliente[]),
           safe(caricaCronologia(), [] as VoceCronologia[]),
-          safe(caricaPreferiti(), [] as string[]),
+          safe(caricaPreferiti(), [] as SentenzaRisultato[]),
           safe(caricaConversazioni(), [] as ConversazioneAI[]),
         ]);
         set({ clienti, cronologia, preferiti, conversazioni, dataLoaded: true });
@@ -303,12 +304,14 @@ export const useApp = create<AppState>()(
         persistWrite(insertCronologia(nuova));
       },
 
-      togglePreferito: (id) => {
-        const presente = get().preferiti.includes(id);
+      togglePreferito: (sentenza) => {
+        const presente = get().preferiti.some((p) => p.id === sentenza.id);
         set((s) => ({
-          preferiti: presente ? s.preferiti.filter((p) => p !== id) : [id, ...s.preferiti],
+          preferiti: presente
+            ? s.preferiti.filter((p) => p.id !== sentenza.id)
+            : [sentenza, ...s.preferiti],
         }));
-        persistWrite(presente ? removePreferitoDb(id) : addPreferitoDb(id));
+        persistWrite(presente ? removePreferitoDb(sentenza.id) : addPreferitoDb(sentenza));
       },
 
       setTheme: (t) => set({ theme: t }),

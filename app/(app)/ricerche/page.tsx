@@ -175,7 +175,7 @@ function Ricerche() {
               <p className="py-10 text-center text-muted-2">Nessuna sentenza trovata. Prova a modificare i termini di ricerca.</p>
             )}
             {risultati.map((s) => (
-              <RisultatoCard key={s.id} s={s} fav={preferiti.includes(s.id)} onFav={() => togglePreferito(s.id)} />
+              <RisultatoCard key={s.id} s={s} fav={preferiti.some((p) => p.id === s.id)} onFav={() => togglePreferito(s)} />
             ))}
           </div>
         )}

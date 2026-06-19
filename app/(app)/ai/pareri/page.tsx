@@ -11,6 +11,7 @@ import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { VarianteParereSelect } from "@/components/ai/VarianteParereSelect";
+import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
 import type { VarianteParere } from "@/lib/ai/client";
@@ -188,6 +189,7 @@ export default function PareriPage() {
                   </div>
                 </div>
               )}
+              {!loading && <PrecedentiPertinenti testo={output} materia={causa?.materia} />}
             </div>
           )}
          </div>
