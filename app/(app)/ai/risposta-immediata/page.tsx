@@ -314,7 +314,7 @@ function Chat() {
               }
             }}
             rows={1}
-            placeholder="Approfondisci l'argomento..."
+            placeholder={vuota ? "Che cosa vuoi sapere?" : "Approfondisci l'argomento..."}
             className="max-h-40 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-2"
           />
           {loading ? (
