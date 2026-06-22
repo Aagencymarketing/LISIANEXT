@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui";
 import { FileDown, FileType2 } from "lucide-react";
-import { stampaPDF } from "@/lib/export/pdf";
+import { scaricaPDF } from "@/lib/export/pdf";
 import { scaricaWord } from "@/lib/export/word";
 
 /** Bottoni "Scarica PDF" e "Scarica Word" per un testo markdown. */
@@ -10,7 +10,7 @@ export function EsportaButtons({ titolo, testo }: { titolo: string; testo: strin
   if (!testo.trim()) return null;
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => stampaPDF(titolo, testo)}>
+      <Button variant="secondary" size="sm" onClick={() => scaricaPDF(titolo, testo)}>
         <FileDown size={16} /> PDF
       </Button>
       <Button variant="secondary" size="sm" onClick={() => scaricaWord(titolo, testo)}>

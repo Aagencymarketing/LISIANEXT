@@ -2,6 +2,8 @@
 
 import type { ModuloAI } from "@/lib/types";
 import { nomeCliente } from "@/lib/types";
+import { MATERIA_CAUSA } from "@/lib/labels";
+import { formatEuro, formatData } from "@/lib/utils";
 import { generaRisposta, streamRisposta, type ContestoAI } from "@/lib/ai/mock";
 import type { ContestoAIPayload, VarianteParere } from "@/lib/ai/prompts";
 
@@ -17,15 +19,26 @@ function toPayload(ctx?: ContestoAI): ContestoAIPayload | undefined {
   if (!ctx) return undefined;
   const p: ContestoAIPayload = {};
   if (ctx.cliente) {
-    p.clienteNome = nomeCliente(ctx.cliente);
-    p.clienteTipo = ctx.cliente.tipo;
+    const cl = ctx.cliente;
+    p.clienteNome = nomeCliente(cl);
+    p.clienteTipo = cl.tipo === "azienda" ? "azienda" : "persona fisica";
+    p.clienteEmail = cl.email || undefined;
+    p.clienteIndirizzo = cl.indirizzo || undefined;
+    p.clienteCitta = cl.citta || undefined;
+    p.clienteCodiceFiscale = cl.codiceFiscale || undefined;
+    p.clientePartitaIva = cl.partitaIva || undefined;
+    p.clienteNote = cl.note || undefined;
   }
   if (ctx.causa) {
-    p.causaOggetto = ctx.causa.oggetto;
-    p.causaMateria = ctx.causa.materia;
-    p.causaControparte = ctx.causa.controparte;
-    p.causaForo = ctx.causa.foro;
-    p.causaNumeroRuolo = ctx.causa.numeroRuolo;
+    const ca = ctx.causa;
+    p.causaOggetto = ca.oggetto;
+    p.causaMateria = ca.materia ? MATERIA_CAUSA[ca.materia] : undefined;
+    p.causaControparte = ca.controparte || undefined;
+    p.causaForo = ca.foro || undefined;
+    p.causaNumeroRuolo = ca.numeroRuolo || undefined;
+    p.causaValore = ca.valore != null ? formatEuro(ca.valore) : undefined;
+    p.causaProssimaUdienza = ca.prossimaUdienza ? formatData(ca.prossimaUdienza) : undefined;
+    p.causaNote = ca.note || undefined;
   }
   if (ctx.tipoAtto) p.tipoAtto = ctx.tipoAtto;
   return p;

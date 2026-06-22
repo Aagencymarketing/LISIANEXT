@@ -8,13 +8,23 @@ import type { ModuloAI } from "@/lib/types";
 // ============================================================
 
 export interface ContestoAIPayload {
+  avvocatoNome?: string;
   clienteNome?: string;
   clienteTipo?: string;
+  clienteEmail?: string;
+  clienteIndirizzo?: string;
+  clienteCitta?: string;
+  clienteCodiceFiscale?: string;
+  clientePartitaIva?: string;
+  clienteNote?: string;
   causaOggetto?: string;
   causaControparte?: string;
   causaForo?: string;
   causaMateria?: string;
   causaNumeroRuolo?: string;
+  causaValore?: string;
+  causaProssimaUdienza?: string;
+  causaNote?: string;
   tipoAtto?: string;
 }
 
@@ -25,7 +35,9 @@ Regole generali:
 - Rispondi sempre in italiano, con registro giuridico preciso e professionale.
 - Fonda l'analisi sul diritto italiano (codici, leggi speciali, principi consolidati di legittimità e di merito).
 - Sii accurato: non inventare MAI estremi di sentenze, numeri di articolo o massime. Riporta l'estremo specifico di una pronuncia (numero e data) solo quando ne sei ragionevolmente certo; in caso di dubbio descrivi l'orientamento giurisprudenziale consolidato senza numeri, e NON aggiungere diciture tipo "(da verificare)". Le citazioni puntuali verificate arriveranno dalla banca dati delle sentenze.
-- Quando mancano dati di fatto, usa segnaposto chiari tra parentesi quadre, es. [DATA], [IMPORTO], [NOME CONTROPARTE].
+- SFRUTTA APPIENO i dati forniti: usa i fatti reali presenti nel "Contesto della pratica" (parti, foro, importi, date, numeri) e SOPRATTUTTO nei DOCUMENTI allegati (li leggi nativamente: PDF, immagini, testo). Estrai dagli allegati i fatti specifici — nomi, date, importi, numeri di delibera/protocollo/procedura, esiti di perizie — e COSTRUISCI l'analisi su quei fatti concreti, non per ipotesi astratte.
+- Usa un segnaposto tra parentesi quadre (es. [DATA], [IMPORTO]) SOLTANTO per un dato che è realmente necessario ma che NON compare né nel contesto né negli allegati. Se il dato è disponibile, riportalo per esteso: non lasciare mai un segnaposto al posto di un'informazione che ti è stata fornita.
+- Quando ti è fornito il nominativo dell'avvocato, usalo nell'intestazione e nella firma (niente "[NOME COGNOME]").
 - Struttura la risposta in markdown pulito (titoli, elenchi puntati dove utile). Niente premesse inutili.`;
 
 const SYSTEM: Record<ModuloAI, string> = {
@@ -46,10 +58,10 @@ Modalità: PARERE LEGALE APPROFONDITO.
 Redigi un parere pro veritate completo, rigoroso e con taglio operativo, nello stile di un avvocato esperto. Segui FEDELMENTE questa struttura, usando i titoli di sezione con numerazione romana e i sottoparagrafi con numerazione decimale.
 
 INTESTAZIONE (in cima, prima del titolo):
-- **Avv. [NOME COGNOME]** su una riga
+- **Avv. [NOME COGNOME]** su una riga — se è fornito il nominativo dell'avvocato, usa QUELLO (es. "**Avv. Stefano Palmacci**"), niente segnaposto.
 - specializzazione/foro su riga successiva, es. "Avvocato — [Materia]" (usa la materia della pratica se fornita)
 - "Lisia Legal AI / LisiaNext" su riga successiva
-Usa segnaposto tra parentesi quadre per i dati non forniti (nome, luogo). NON inventare nomi propri o date.
+Usa un segnaposto tra parentesi quadre solo per i dati davvero non forniti (es. luogo, se mancante). NON inventare nomi propri o date.
 
 Poi:
 - Titolo: \`## PARERE LEGALE\`
@@ -65,7 +77,7 @@ Sezioni (titoli come \`## I. QUESITO\`, \`## II. PREMESSE IN FATTO\`, ecc.):
 
 In chiusura, dopo le conclusioni:
 - riga di disclaimer: "Il presente parere è reso sulla base delle circostanze rappresentate e della normativa vigente alla data odierna; ulteriori elementi fattuali potranno condurre a valutazioni differenti."
-- "Con osservanza," seguito da "[Luogo], [data]" e "Avv. [NOME COGNOME]" come segnaposto.
+- "Con osservanza," seguito dal luogo e dalla data (usa quelli forniti; altrimenti "[Luogo], [data]") e dal nominativo dell'avvocato (usa quello fornito, es. "Avv. Stefano Palmacci"; in mancanza, "Avv. [NOME COGNOME]").
 
 Stile e contenuto:
 - Registro forense formale ma chiaro e leggibile.
@@ -125,14 +137,28 @@ export function systemPrompt(modulo: ModuloAI, variante?: VarianteParere): strin
 function bloccoContesto(c?: ContestoAIPayload): string {
   if (!c) return "";
   const righe: string[] = [];
+  // Identità del professionista (per intestazione e firma)
+  if (c.avvocatoNome) righe.push(`- Avvocato redattore: Avv. ${c.avvocatoNome}`);
+  // Dati del cliente
   if (c.clienteNome) righe.push(`- Cliente: ${c.clienteNome}${c.clienteTipo ? ` (${c.clienteTipo})` : ""}`);
-  if (c.causaOggetto) righe.push(`- Pratica: ${c.causaOggetto}`);
+  if (c.clienteIndirizzo || c.clienteCitta)
+    righe.push(`- Indirizzo cliente: ${[c.clienteIndirizzo, c.clienteCitta].filter(Boolean).join(", ")}`);
+  if (c.clienteCodiceFiscale) righe.push(`- Codice fiscale cliente: ${c.clienteCodiceFiscale}`);
+  if (c.clientePartitaIva) righe.push(`- Partita IVA cliente: ${c.clientePartitaIva}`);
+  if (c.clienteEmail) righe.push(`- Email cliente: ${c.clienteEmail}`);
+  // Dati della pratica
+  if (c.causaOggetto) righe.push(`- Pratica/oggetto: ${c.causaOggetto}`);
   if (c.causaMateria) righe.push(`- Materia: ${c.causaMateria}`);
   if (c.causaControparte) righe.push(`- Controparte: ${c.causaControparte}`);
   if (c.causaForo) righe.push(`- Foro/Autorità: ${c.causaForo}`);
   if (c.causaNumeroRuolo) righe.push(`- Numero di ruolo: ${c.causaNumeroRuolo}`);
+  if (c.causaValore) righe.push(`- Valore della causa: ${c.causaValore}`);
+  if (c.causaProssimaUdienza) righe.push(`- Prossima udienza: ${c.causaProssimaUdienza}`);
+  // Note libere (spesso contengono i fatti del caso)
+  if (c.clienteNote) righe.push(`- Note sul cliente: ${c.clienteNote}`);
+  if (c.causaNote) righe.push(`- Note sulla pratica (fatti rilevanti): ${c.causaNote}`);
   if (righe.length === 0) return "";
-  return `\n\nContesto della pratica (usa questi dati nella risposta):\n${righe.join("\n")}`;
+  return `\n\nContesto della pratica (usa questi dati REALI nella risposta, non lasciarli come segnaposto):\n${righe.join("\n")}`;
 }
 
 /** Costruisce il messaggio utente da inviare a Claude. */

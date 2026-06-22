@@ -71,6 +71,16 @@ export async function POST(req: Request) {
     return new Response("Parametri mancanti", { status: 400 });
   }
 
+  // Identità dell'avvocato dall'utente autenticato (per intestazione/firma del parere/atto).
+  const avvocatoNome =
+    (user.user_metadata?.nome_completo as string | undefined)?.trim() ||
+    (user.email || "").split("@")[0] ||
+    undefined;
+  const contestoFinale: ContestoAIPayload = {
+    ...(contesto ?? {}),
+    avvocatoNome: contesto?.avvocatoNome || avvocatoNome,
+  };
+
   // Storico conversazione (multi-turno). L'ultimo messaggio utente è `prompt`.
   const messaggiPrecedenti = (storia ?? [])
     .filter((m) => m.contenuto?.trim())
@@ -114,7 +124,7 @@ export async function POST(req: Request) {
     }
   }
 
-  let testoUtente = buildUserMessage(modulo, prompt, contesto);
+  let testoUtente = buildUserMessage(modulo, prompt, contestoFinale);
   if (testiDoc.length) testoUtente += `\n\nContenuto dei documenti testuali allegati:\n${testiDoc.join("\n\n")}`;
   if (saltati.length)
     testoUtente += `\n\n(Nota: i seguenti allegati non sono in un formato leggibile e non sono stati analizzati: ${saltati.join(", ")}.)`;

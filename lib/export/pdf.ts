@@ -1,6 +1,24 @@
 "use client";
 
-import { parseBlocks, type Run } from "./markdown";
+import { parseBlocks, slugFile, type Run } from "./markdown";
+import { renderPdf } from "./pdfRender";
+
+/**
+ * Scarica un PDF "pulito" (testo selezionabile, niente artefatti di stampa del
+ * browser come "about:blank" o data/ora). Genera il file con jsPDF; se per
+ * qualunque motivo fallisse, ripiega sulla stampa-browser.
+ */
+export async function scaricaPDF(titolo: string, markdown: string) {
+  try {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    renderPdf(doc, titolo, markdown);
+    doc.save(`${slugFile(titolo)}.pdf`);
+  } catch (e) {
+    console.error("[pdf] generazione fallita, ripiego sulla stampa", e);
+    stampaPDF(titolo, markdown);
+  }
+}
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
