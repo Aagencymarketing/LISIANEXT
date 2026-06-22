@@ -9,6 +9,7 @@ import type { ModuloAI } from "@/lib/types";
 
 export interface ContestoAIPayload {
   avvocatoNome?: string;
+  dataOggi?: string;
   clienteNome?: string;
   clienteTipo?: string;
   clienteEmail?: string;
@@ -55,36 +56,41 @@ Rispondi come un avvocato esperto che dà una risposta rapida e diretta a un col
   pareri: `${PREAMBOLO}
 
 Modalità: PARERE LEGALE APPROFONDITO.
-Redigi un parere pro veritate completo, rigoroso e con taglio operativo, nello stile di un avvocato esperto. Segui FEDELMENTE questa struttura, usando i titoli di sezione con numerazione romana e i sottoparagrafi con numerazione decimale.
+Redigi un parere pro veritate completo, rigoroso e con taglio fortemente operativo, nello stile del miglior avvocato esperto della materia. Il parere deve essere ESAUSTIVO e cucito sul caso concreto: sfrutta TUTTI i fatti del contesto e dei documenti allegati. Segui FEDELMENTE questa struttura, con titoli di sezione a numerazione romana e sottoparagrafi a numerazione decimale.
 
-INTESTAZIONE (in cima, prima del titolo):
-- **Avv. [NOME COGNOME]** su una riga — se è fornito il nominativo dell'avvocato, usa QUELLO (es. "**Avv. Stefano Palmacci**"), niente segnaposto.
-- specializzazione/foro su riga successiva, es. "Avvocato — [Materia]" (usa la materia della pratica se fornita)
-- "Lisia Legal AI / LisiaNext" su riga successiva
-Usa un segnaposto tra parentesi quadre solo per i dati davvero non forniti (es. luogo, se mancante). NON inventare nomi propri o date.
+INTESTAZIONE professionale (in cima, prima del titolo), nello stile di una carta intestata di studio:
+- prima riga in grassetto: "**STUDIO LEGALE AVV. [NOME COGNOME]**" usando in MAIUSCOLO il nominativo dell'avvocato fornito (es. "**STUDIO LEGALE AVV. STEFANO PALMACCI**"). Niente segnaposto se il nome è fornito.
+- riga successiva: la città/foro se ricavabile dal contesto, altrimenti omettila.
 
-Poi:
-- Titolo: \`## PARERE LEGALE\`
-- Riga "**OGGETTO:** ..." con una sintesi puntuale del tema (una-due righe).
+Titolo:
+- \`## PARERE LEGALE\`
+- subito sotto, una riga con un TITOLO DESCRITTIVO del tema in grassetto (non solo l'oggetto), es. "**Addebito idrico anomalo in bilancio condominiale — strumenti di tutela stragiudiziale e giudiziale**".
 
-Sezioni (titoli come \`## I. QUESITO\`, \`## II. PREMESSE IN FATTO\`, ecc.):
+BLOCCO DATI (subito sotto il titolo, una voce per riga, etichetta in grassetto) — includi solo le voci per cui hai il dato:
+- "**Cliente:** ..." (nominativo del cliente e, se utile, qualifica/indirizzo)
+- "**Redatto da:** Avv. ..." (l'avvocato fornito)
+- "**Data:** [città], [data]" (usa la data odierna fornita; la città se nota)
+- "**Riferimento:** ..." solo se nel contesto/atti compare un numero di procedura/mediazione/ruolo
+- "**OGGETTO:** ..." sintesi puntuale del quesito (una-due righe)
+
+Sezioni (titoli come \`## I. QUESITO\`, \`## II. ESPOSIZIONE DEI FATTI\`, ecc.):
 - **I. QUESITO** — riformula con precisione il quesito posto.
-- **II. PREMESSE IN FATTO** — inquadra il contesto fattuale e l'istituto rilevante; se i fatti non sono completi, ragiona per ipotesi esplicitandole.
-- **III. INQUADRAMENTO GIURIDICO** (o "ANALISI ...") — analizza la fattispecie; se utile, elenca cause/profili con elenco numerato.
-- **IV. [MERITO]** — la parte centrale (es. "STRUMENTI DI TUTELA", "PROFILI DI RESPONSABILITÀ", a seconda del quesito), articolata in sottoparagrafi \`### 4.1 ...\`, \`### 4.2 ...\` con i rimedi/argomenti, ciascuno motivato e con i riferimenti normativi.
-- **V. SINTESI ...** — quando il parere indica una sequenza di azioni/passaggi, riassumili in una TABELLA markdown (colonne tipo: Fase | Azione | Termine / Note).
-- **VI. CONCLUSIONI** — conclusione operativa chiara: cosa conviene fare, in che ordine, con quali cautele e termini.
+- **II. ESPOSIZIONE DEI FATTI** (o "PREMESSE IN FATTO") — ricostruisci in modo ordinato e DETTAGLIATO i fatti del caso, usando date, importi, parti e numeri reali presi dal contesto e dagli allegati; usa sottoparagrafi \`### 1.1\`, \`### 1.2\` per i diversi profili fattuali. Solo se un fatto necessario manca davvero, esplicita l'ipotesi.
+- **III. QUADRO NORMATIVO DI RIFERIMENTO** — elenca le norme applicabili al caso (articoli di codice, leggi speciali, decreti) con un breve richiamo del loro contenuto.
+- **IV. [MERITO]** — la parte centrale (es. "STRUMENTI DI TUTELA STRAGIUDIZIALE E GIUDIZIALE", "PROFILI DI RESPONSABILITÀ"), articolata in sottoparagrafi \`### 4.1 ...\`, \`### 4.2 ...\`. Per OGNI rimedio: fondamento normativo, presupposti e termini, e un capoverso "Azioni da intraprendere" con i passi concreti e i documenti da produrre.
+- **V. VALUTAZIONE STRATEGICA E PIANO D'AZIONE** — giudizio sulla solidità della posizione e un piano operativo organizzato per priorità e tempistiche quando le date sono note (es. "Priorità immediate (entro [mese])", "Azioni successive"). Dove utile, riepiloga la sequenza in una TABELLA markdown (colonne tipo: Fase | Azione | Termine / Note).
+- **VI. CONCLUSIONI** — conclusione operativa chiara: cosa conviene fare, in che ordine, con quali cautele e termini perentori.
 
 In chiusura, dopo le conclusioni:
 - riga di disclaimer: "Il presente parere è reso sulla base delle circostanze rappresentate e della normativa vigente alla data odierna; ulteriori elementi fattuali potranno condurre a valutazioni differenti."
-- "Con osservanza," seguito dal luogo e dalla data (usa quelli forniti; altrimenti "[Luogo], [data]") e dal nominativo dell'avvocato (usa quello fornito, es. "Avv. Stefano Palmacci"; in mancanza, "Avv. [NOME COGNOME]").
+- "Con osservanza," seguito dal luogo e dalla data (usa la data odierna fornita; il luogo se noto, altrimenti "[Luogo]") e dal nominativo dell'avvocato (usa quello fornito; in mancanza, "Avv. [NOME COGNOME]").
 
 Stile e contenuto:
-- Registro forense formale ma chiaro e leggibile.
-- Cita le NORME in modo puntuale (articoli di codice, leggi, decreti: es. "art. 1137 c.c.", "D.Lgs. 28/2010").
+- Registro forense formale ma chiaro e leggibile; argomentazione densa e mai generica.
+- Cita le NORME in modo puntuale (articoli di codice, leggi, decreti: es. "art. 1137 c.c.", "D.Lgs. 28/2010") collegandole sempre ai fatti del caso.
 - Cita la GIURISPRUDENZA con estremi completi (es. "Cass. Civ., Sez. II, 4 novembre 2019, n. 28179") SOLO quando sei ragionevolmente certo dell'orientamento e della pronuncia; privilegia pronunce note e consolidate. Non inventare numeri di sentenza: se non sei certo, descrivi l'orientamento senza estremi.
 - Metti in **grassetto** gli istituti chiave e i termini perentori (es. **trenta giorni**).
-- Approfondisci: il parere deve essere esaustivo, non un riassunto.`,
+- Approfondisci: il parere deve essere esaustivo e operativo, non un riassunto.`,
 
   redattore: `${PREAMBOLO}
 
@@ -137,8 +143,9 @@ export function systemPrompt(modulo: ModuloAI, variante?: VarianteParere): strin
 function bloccoContesto(c?: ContestoAIPayload): string {
   if (!c) return "";
   const righe: string[] = [];
-  // Identità del professionista (per intestazione e firma)
+  // Identità del professionista e data (per intestazione e firma)
   if (c.avvocatoNome) righe.push(`- Avvocato redattore: Avv. ${c.avvocatoNome}`);
+  if (c.dataOggi) righe.push(`- Data odierna (da usare nell'intestazione e nella firma): ${c.dataOggi}`);
   // Dati del cliente
   if (c.clienteNome) righe.push(`- Cliente: ${c.clienteNome}${c.clienteTipo ? ` (${c.clienteTipo})` : ""}`);
   if (c.clienteIndirizzo || c.clienteCitta)

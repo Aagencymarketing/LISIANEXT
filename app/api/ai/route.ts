@@ -76,9 +76,16 @@ export async function POST(req: Request) {
     (user.user_metadata?.nome_completo as string | undefined)?.trim() ||
     (user.email || "").split("@")[0] ||
     undefined;
+  // Data odierna in italiano (es. "22 giugno 2026"), per intestazione e firma.
+  const dataOggi = new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
   const contestoFinale: ContestoAIPayload = {
     ...(contesto ?? {}),
     avvocatoNome: contesto?.avvocatoNome || avvocatoNome,
+    dataOggi: contesto?.dataOggi || dataOggi,
   };
 
   // Storico conversazione (multi-turno). L'ultimo messaggio utente è `prompt`.
@@ -140,11 +147,14 @@ export async function POST(req: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
+        // Pareri e atti = prodotto di punta: ragionamento "high" per la massima
+        // qualità. Le risposte interattive restano "medium" (più rapide/economiche).
+        const effort = modulo === "pareri" || modulo === "redattore" ? "high" : "medium";
         const aiStream = anthropic.messages.stream({
           model: MODELLO,
           max_tokens: maxTokens(modulo),
           thinking: { type: "adaptive" },
-          output_config: { effort: "medium" },
+          output_config: { effort },
           system: systemPrompt(modulo, variante),
           messages: [
             ...messaggiPrecedenti,
