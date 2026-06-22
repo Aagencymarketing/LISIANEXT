@@ -25,12 +25,21 @@ interface DocumentoRef {
   estensione?: string;
 }
 
+// Documento allegato "al volo" (es. dalla pagina Pareri): contenuto inline in base64,
+// non persistito su Storage.
+interface DocumentoInline {
+  nome: string;
+  estensione?: string;
+  dati: string; // base64 (senza prefisso data:)
+}
+
 interface Body {
   modulo: ModuloAI;
   prompt: string;
   contesto?: ContestoAIPayload;
   storia?: Turno[];
   documenti?: DocumentoRef[];
+  documentiInline?: DocumentoInline[];
   variante?: VarianteParere;
 }
 
@@ -66,7 +75,7 @@ export async function POST(req: Request) {
   } catch {
     return new Response("Richiesta non valida", { status: 400 });
   }
-  const { modulo, prompt, contesto, storia, documenti, variante } = body;
+  const { modulo, prompt, contesto, storia, documenti, documentiInline, variante } = body;
   if (!prompt || !modulo) {
     return new Response("Parametri mancanti", { status: 400 });
   }
@@ -101,31 +110,46 @@ export async function POST(req: Request) {
   const blocchiDoc: any[] = [];
   const testiDoc: string[] = [];
   const saltati: string[] = [];
+
+  // Aggiunge un documento (buffer già scaricato/decodificato) ai blocchi per Claude.
+  const aggiungiDoc = (nome: string, estensione: string | undefined, buf: Buffer) => {
+    const est = (estensione || nome.split(".").pop() || "").toLowerCase();
+    if (est === "pdf") {
+      blocchiDoc.push({
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
+        title: nome,
+      });
+    } else if (IMG[est]) {
+      blocchiDoc.push({
+        type: "image",
+        source: { type: "base64", media_type: IMG[est], data: buf.toString("base64") },
+      });
+    } else if (est === "txt") {
+      testiDoc.push(`### Documento "${nome}"\n${buf.toString("utf-8").slice(0, 20000)}`);
+    } else {
+      saltati.push(nome);
+    }
+  };
+
+  // 1) Documenti già su Supabase Storage (gestionale / Analizza ed esegui).
   for (const d of documenti ?? []) {
-    const est = (d.estensione || d.nome.split(".").pop() || "").toLowerCase();
     try {
       const { data, error } = await supabase.storage.from("documenti").download(d.path);
       if (error || !data) {
         saltati.push(d.nome);
         continue;
       }
-      const buf = Buffer.from(await data.arrayBuffer());
-      if (est === "pdf") {
-        blocchiDoc.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") },
-          title: d.nome,
-        });
-      } else if (IMG[est]) {
-        blocchiDoc.push({
-          type: "image",
-          source: { type: "base64", media_type: IMG[est], data: buf.toString("base64") },
-        });
-      } else if (est === "txt") {
-        testiDoc.push(`### Documento "${d.nome}"\n${buf.toString("utf-8").slice(0, 20000)}`);
-      } else {
-        saltati.push(d.nome);
-      }
+      aggiungiDoc(d.nome, d.estensione, Buffer.from(await data.arrayBuffer()));
+    } catch {
+      saltati.push(d.nome);
+    }
+  }
+
+  // 2) Documenti inline in base64 (upload "al volo" dalla pagina Pareri/atti).
+  for (const d of documentiInline ?? []) {
+    try {
+      aggiungiDoc(d.nome, d.estensione, Buffer.from(d.dati, "base64"));
     } catch {
       saltati.push(d.nome);
     }
@@ -147,14 +171,11 @@ export async function POST(req: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        // Pareri e atti = prodotto di punta: ragionamento "high" per la massima
-        // qualità. Le risposte interattive restano "medium" (più rapide/economiche).
-        const effort = modulo === "pareri" || modulo === "redattore" ? "high" : "medium";
         const aiStream = anthropic.messages.stream({
           model: MODELLO,
           max_tokens: maxTokens(modulo),
           thinking: { type: "adaptive" },
-          output_config: { effort },
+          output_config: { effort: "medium" },
           system: systemPrompt(modulo, variante),
           messages: [
             ...messaggiPrecedenti,

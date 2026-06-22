@@ -14,7 +14,7 @@ import { VarianteParereSelect } from "@/components/ai/VarianteParereSelect";
 import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
-import type { VarianteParere } from "@/lib/ai/client";
+import { fileToInline, type VarianteParere } from "@/lib/ai/client";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { FileSearch, Send, Square, Check, Plus, User, Copy } from "lucide-react";
@@ -28,7 +28,7 @@ export default function PareriPage() {
   const toggleAiPanel = useApp((s) => s.toggleAiPanel);
 
   const [quesito, setQuesito] = useState("");
-  const [files, setFiles] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [clienteId, setClienteId] = useState<string>();
   const [causaId, setCausaId] = useState<string>();
   const [convId, setConvId] = useState<string>();
@@ -61,7 +61,8 @@ export default function PareriPage() {
     if (!quesito.trim()) return;
     setConvId(undefined);
     addCronologia({ testo: quesito.slice(0, 120), tipo: "Parere" });
-    const testo = await run(quesito, { cliente, causa }, { variante });
+    const documentiInline = files.length ? await Promise.all(files.map(fileToInline)) : undefined;
+    const testo = await run(quesito, { cliente, causa }, { variante, documentiInline });
     if (testo) {
       const id = uuid();
       setConvId(id);
@@ -139,7 +140,7 @@ export default function PareriPage() {
               <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Documenti (opzionale)</p>
               <FileDrop files={files} onChange={setFiles} />
               <p className="mt-1.5 text-xs text-muted-2">
-                L&apos;analisi automatica del contenuto dei documenti sarà disponibile a breve.
+                I documenti allegati (PDF, immagini, TXT) vengono letti dall&apos;AI e usati per un parere più preciso.
               </p>
             </div>
 

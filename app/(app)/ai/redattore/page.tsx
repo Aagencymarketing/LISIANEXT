@@ -6,6 +6,7 @@ import { useApp } from "@/lib/store";
 import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
 import { FileDrop } from "@/components/ai/FileDrop";
+import { fileToInline } from "@/lib/ai/client";
 import { ConversazioniPanel } from "@/components/ai/ConversazioniPanel";
 import { ConversazioniDrawer } from "@/components/ai/ConversazioniDrawer";
 import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
@@ -32,7 +33,7 @@ function Redattore() {
   const [tipoAttoCustom, setTipoAttoCustom] = useState("");
   const tipoAttoEff = tipoAtto === "Altro" ? (tipoAttoCustom.trim() || "Atto") : tipoAtto;
   const [oggetto, setOggetto] = useState("");
-  const [files, setFiles] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [clienteId, setClienteId] = useState<string | undefined>(params.get("cliente") || undefined);
   const [causaId, setCausaId] = useState<string | undefined>(params.get("causa") || undefined);
   const [copiato, setCopiato] = useState(false);
@@ -67,7 +68,8 @@ function Redattore() {
     if (!oggetto.trim()) return;
     setConvId(undefined);
     addCronologia({ testo: `${tipoAttoEff} — ${oggetto.slice(0, 80)}`, tipo: "Atto" });
-    const testo = await run(oggetto, { cliente, causa, tipoAtto: tipoAttoEff });
+    const documentiInline = files.length ? await Promise.all(files.map(fileToInline)) : undefined;
+    const testo = await run(oggetto, { cliente, causa, tipoAtto: tipoAttoEff }, { documentiInline });
     if (testo) {
       const id = uuid();
       setConvId(id);
@@ -169,7 +171,7 @@ function Redattore() {
               </p>
               <FileDrop files={files} onChange={setFiles} />
               <p className="mt-1.5 text-xs text-muted-2">
-                L&apos;analisi automatica del contenuto dei documenti sarà disponibile a breve.
+                I documenti allegati (PDF, immagini, TXT) vengono letti dall&apos;AI e usati per redigere l&apos;atto.
               </p>
             </div>
 

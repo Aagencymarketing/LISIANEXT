@@ -61,6 +61,25 @@ export interface DocumentoRef {
   estensione?: string;
 }
 
+export interface DocumentoInline {
+  nome: string;
+  estensione?: string;
+  dati: string; // base64 (senza prefisso data:)
+}
+
+/** Legge un File del browser e lo converte in DocumentoInline (base64) per l'API. */
+export async function fileToInline(file: File): Promise<DocumentoInline> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+  const base64 = dataUrl.split(",")[1] || "";
+  const estensione = (file.name.split(".").pop() || "").toLowerCase();
+  return { nome: file.name, estensione, dati: base64 };
+}
+
 export async function streamAI(
   modulo: ModuloAI,
   prompt: string,
@@ -70,6 +89,7 @@ export async function streamAI(
   storia?: Turno[],
   documenti?: DocumentoRef[],
   variante?: VarianteParere,
+  documentiInline?: DocumentoInline[],
 ): Promise<string> {
   if (!AI_COLLEGATO) {
     // --- Simulato ---
@@ -86,7 +106,7 @@ export async function streamAI(
   const res = await fetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ modulo, prompt, contesto: toPayload(ctx), storia, documenti, variante }),
+    body: JSON.stringify({ modulo, prompt, contesto: toPayload(ctx), storia, documenti, documentiInline, variante }),
     signal,
   });
 

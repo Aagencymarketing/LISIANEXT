@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { type ContestoAI } from "@/lib/ai/mock";
-import { streamAI, type VarianteParere } from "@/lib/ai/client";
+import { streamAI, type VarianteParere, type DocumentoInline } from "@/lib/ai/client";
 import type { ModuloAI } from "@/lib/types";
 
 export function useAIStream(modulo: ModuloAI) {
@@ -11,7 +11,11 @@ export function useAIStream(modulo: ModuloAI) {
   const abortRef = useRef<AbortController | null>(null);
 
   const run = useCallback(
-    async (prompt: string, ctx?: ContestoAI, opts?: { variante?: VarianteParere }): Promise<string | null> => {
+    async (
+      prompt: string,
+      ctx?: ContestoAI,
+      opts?: { variante?: VarianteParere; documentiInline?: DocumentoInline[] },
+    ): Promise<string | null> => {
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
@@ -19,7 +23,17 @@ export function useAIStream(modulo: ModuloAI) {
       setOutput("");
       let acc = "";
       try {
-        acc = await streamAI(modulo, prompt, ctx, (parziale) => setOutput(parziale), ac.signal, undefined, undefined, opts?.variante);
+        acc = await streamAI(
+          modulo,
+          prompt,
+          ctx,
+          (parziale) => setOutput(parziale),
+          ac.signal,
+          undefined,
+          undefined,
+          opts?.variante,
+          opts?.documentiInline,
+        );
       } catch (e) {
         if (ac.signal.aborted) return null;
         const msg = e instanceof Error ? e.message : "Errore imprevisto";
