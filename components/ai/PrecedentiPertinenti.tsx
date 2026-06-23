@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useApp } from "@/lib/store";
 import { trovaPrecedenti } from "@/lib/ai/precedenti";
 import { SENTENZE_COLLEGATO } from "@/lib/ai/sentenze";
-import type { SentenzaRisultato } from "@/lib/types";
+import { nomeCliente, type SentenzaRisultato } from "@/lib/types";
 import { Button, Badge } from "@/components/ui";
-import { Scale, Loader2, Star, ChevronDown, Database } from "lucide-react";
+import { Scale, Loader2, Star, ChevronDown, Database, FolderPlus, Check } from "lucide-react";
 
 /**
  * Sezione "Precedenti pertinenti": cerca sentenze reali a partire dal testo generato
@@ -16,13 +16,20 @@ export function PrecedentiPertinenti({
   testo,
   materia,
   leggera,
+  clienteId,
 }: {
   testo: string;
   materia?: string;
   leggera?: boolean;
+  clienteId?: string;
 }) {
   const preferiti = useApp((s) => s.preferiti);
   const togglePreferito = useApp((s) => s.togglePreferito);
+  const clienti = useApp((s) => s.clienti);
+  const sentenzeCliente = useApp((s) => s.sentenzeCliente);
+  const addSentenzaCliente = useApp((s) => s.addSentenzaCliente);
+  const clienteSel = clienteId ? clienti.find((c) => c.id === clienteId) : undefined;
+  const clienteNomeSel = clienteSel ? nomeCliente(clienteSel) : undefined;
   const [stato, setStato] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [risultati, setRisultati] = useState<SentenzaRisultato[]>([]);
   const [mostraAltre, setMostraAltre] = useState(false);
@@ -47,7 +54,15 @@ export function PrecedentiPertinenti({
   };
 
   const card = (s: SentenzaRisultato) => (
-    <PrecedenteCard key={s.id} s={s} fav={preferiti.some((p) => p.id === s.id)} onFav={() => togglePreferito(s)} />
+    <PrecedenteCard
+      key={s.id}
+      s={s}
+      fav={preferiti.some((p) => p.id === s.id)}
+      onFav={() => togglePreferito(s)}
+      clienteNomeSel={clienteNomeSel}
+      salvata={!!clienteId && sentenzeCliente.some((x) => x.clienteId === clienteId && x.sentenza.id === s.id)}
+      onSalvaCliente={clienteId ? () => addSentenzaCliente(clienteId, s) : undefined}
+    />
   );
 
   const primi = risultati.slice(0, PRIMO_BLOCCO);
@@ -112,7 +127,21 @@ export function PrecedentiPertinenti({
   );
 }
 
-function PrecedenteCard({ s, fav, onFav }: { s: SentenzaRisultato; fav: boolean; onFav: () => void }) {
+function PrecedenteCard({
+  s,
+  fav,
+  onFav,
+  clienteNomeSel,
+  salvata,
+  onSalvaCliente,
+}: {
+  s: SentenzaRisultato;
+  fav: boolean;
+  onFav: () => void;
+  clienteNomeSel?: string;
+  salvata?: boolean;
+  onSalvaCliente?: () => void;
+}) {
   const [aperta, setAperta] = useState(false);
   return (
     <div className="rounded-xl border border-border bg-surface-2 p-3.5">
@@ -125,6 +154,17 @@ function PrecedenteCard({ s, fav, onFav }: { s: SentenzaRisultato; fav: boolean;
           <Star size={16} fill={fav ? "currentColor" : "none"} />
         </button>
       </div>
+      {onSalvaCliente && (
+        <button
+          onClick={onSalvaCliente}
+          disabled={salvata}
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+            salvata ? "text-success" : "bg-primary-soft text-primary hover:bg-primary-soft/70"
+          }`}
+        >
+          {salvata ? <><Check size={13} /> Salvata nel fascicolo di {clienteNomeSel}</> : <><FolderPlus size={13} /> Salva nel fascicolo di {clienteNomeSel}</>}
+        </button>
+      )}
       {s.nota && (
         <p className="mt-2 rounded-md bg-primary-soft px-2.5 py-1.5 text-xs text-primary">
           <span className="font-semibold">Perché è pertinente:</span> {s.nota}

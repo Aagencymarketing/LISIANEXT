@@ -143,6 +143,14 @@ export interface SentenzaRisultato {
   nota?: string; // nota di pertinenza (perché è rilevante) — da Fase 3
 }
 
+// Sentenza salvata nel fascicolo di un cliente (snapshot).
+export interface SentenzaCliente {
+  id: string;
+  clienteId: string;
+  sentenza: SentenzaRisultato;
+  createdAt: string;
+}
+
 // Helper di visualizzazione
 export function nomeCliente(c: Cliente): string {
   if (c.tipo === "azienda") return c.ragioneSociale || "Azienda senza nome";

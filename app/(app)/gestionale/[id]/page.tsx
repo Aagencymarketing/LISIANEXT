@@ -8,7 +8,7 @@ import { nomeCliente, inizialiCliente } from "@/lib/types";
 import { STATO_CAUSA, MATERIA_CAUSA, TIPO_ATTIVITA } from "@/lib/labels";
 import { formatData, formatEuro } from "@/lib/utils";
 import { Badge, Button, Modal, EmptyState, Select, type Tone } from "@/components/ui";
-import type { ModuloAI } from "@/lib/types";
+import type { ModuloAI, SentenzaRisultato } from "@/lib/types";
 import { ClienteForm, type ClienteDraft } from "@/components/gestionale/ClienteForm";
 import { CausaForm, type CausaDraft } from "@/components/gestionale/CausaForm";
 import { AttivitaForm, type AttivitaDraft } from "@/components/gestionale/AttivitaForm";
@@ -38,6 +38,8 @@ import {
   Download,
   Loader2,
   Sparkles,
+  Scale,
+  ChevronDown,
 } from "lucide-react";
 
 type Tab = "panoramica" | "pratiche" | "lavori" | "storico" | "documenti";
@@ -76,6 +78,8 @@ export default function ClienteDetailPage() {
   const removeDocumento = useApp((s) => s.removeDocumento);
   const conversazioni = useApp((s) => s.conversazioni);
   const removeConversazione = useApp((s) => s.removeConversazione);
+  const sentenzeCliente = useApp((s) => s.sentenzeCliente);
+  const removeSentenzaCliente = useApp((s) => s.removeSentenzaCliente);
 
   const cliente = clienti.find((c) => c.id === id);
 
@@ -164,6 +168,8 @@ export default function ClienteDetailPage() {
     .filter((c) => c.clienteId === cliente.id)
     .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
 
+  const sentenzeDelCliente = sentenzeCliente.filter((x) => x.clienteId === cliente.id);
+
   const causeAttive = cliente.cause.filter(
     (c) => !["chiusa_vinta", "chiusa_persa", "archiviata"].includes(c.stato),
   );
@@ -237,7 +243,7 @@ export default function ClienteDetailPage() {
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: "panoramica", label: "Panoramica" },
     { key: "pratiche", label: "Pratiche", count: cliente.cause.length },
-    { key: "lavori", label: "Lavori AI", count: lavoriCliente.length },
+    { key: "lavori", label: "Lavori AI", count: lavoriCliente.length + sentenzeDelCliente.length },
     { key: "storico", label: "Storico", count: storicoOrdinato.length },
     { key: "documenti", label: "Documenti", count: cliente.documenti.length },
   ];
@@ -391,6 +397,20 @@ export default function ClienteDetailPage() {
               ))}
             </div>
           )}
+
+          {/* Sentenze salvate per il cliente */}
+          {sentenzeDelCliente.length > 0 && (
+            <div className="pt-2">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <Scale size={14} /> Sentenze salvate <span className="text-muted-2">({sentenzeDelCliente.length})</span>
+              </p>
+              <div className="space-y-2">
+                {sentenzeDelCliente.map((x) => (
+                  <SentenzaSalvataCard key={x.id} s={x.sentenza} onElimina={() => removeSentenzaCliente(x.id)} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -494,6 +514,39 @@ export default function ClienteDetailPage() {
           <p className="text-xs text-muted-2">Il file viene caricato in modo sicuro e privato sul tuo spazio Storage.</p>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function SentenzaSalvataCard({ s, onElimina }: { s: SentenzaRisultato; onElimina: () => void }) {
+  const [aperta, setAperta] = useState(false);
+  return (
+    <div className="rounded-xl border border-border bg-surface p-3.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-primary">{s.estremi}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-2">
+            {s.materia && <Badge tone="blue">{s.materia}</Badge>}
+            {s.fonte && <span>{s.fonte}</span>}
+          </div>
+        </div>
+        <button onClick={onElimina} className="shrink-0 rounded p-1 text-muted-2 hover:text-danger" aria-label="Rimuovi sentenza">
+          <Trash2 size={15} />
+        </button>
+      </div>
+      {s.massima && <p className="mt-2 text-sm leading-relaxed text-foreground/90">{s.massima}</p>}
+      {s.testoCompleto && (
+        <div className="mt-2">
+          <button onClick={() => setAperta((v) => !v)} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+            <ChevronDown size={14} className={`transition ${aperta ? "rotate-180" : ""}`} /> {aperta ? "Nascondi" : "Testo integrale"}
+          </button>
+          {aperta && (
+            <p className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-xs leading-relaxed text-foreground/80">
+              {s.testoCompleto}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

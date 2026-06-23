@@ -308,7 +308,7 @@ function Chat() {
                 </div>
               )}
               {!loading && !streaming && ultimaRisposta && (
-                <PrecedentiPertinenti key={ultimaRisposta.id} testo={ultimaRisposta.contenuto} leggera />
+                <PrecedentiPertinenti key={ultimaRisposta.id} testo={ultimaRisposta.contenuto} leggera clienteId={clienteId} />
               )}
             </div>
           )}

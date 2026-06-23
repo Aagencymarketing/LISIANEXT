@@ -8,9 +8,9 @@ import {
   cercaSentenzePerEstremi,
   SENTENZE_COLLEGATO,
 } from "@/lib/ai/sentenze";
-import type { SentenzaRisultato } from "@/lib/types";
+import { nomeCliente, type SentenzaRisultato } from "@/lib/types";
 import { Badge } from "@/components/ui";
-import { Search, Star, Database, Loader2, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { Search, Star, Database, Loader2, SlidersHorizontal, ChevronDown, Link2, FolderPlus, Check } from "lucide-react";
 
 const ESEMPI = [
   "La clausola risolutiva di un contratto rientra tra quelle vessatorie ex art. 1341 c.c.?",
@@ -25,7 +25,11 @@ function Ricerche() {
   const addCronologia = useApp((s) => s.addCronologia);
   const preferiti = useApp((s) => s.preferiti);
   const togglePreferito = useApp((s) => s.togglePreferito);
+  const clienti = useApp((s) => s.clienti);
+  const sentenzeCliente = useApp((s) => s.sentenzeCliente);
+  const addSentenzaCliente = useApp((s) => s.addSentenzaCliente);
 
+  const [clienteId, setClienteId] = useState<string | undefined>(undefined);
   const [modo, setModo] = useState<Modo>("testo");
   const [q, setQ] = useState("");
   const [estremi, setEstremi] = useState({ number: "", year: "", place: "", issuer: "" });
@@ -140,6 +144,23 @@ function Ricerche() {
             <span>Anteprima demo · il collegamento al database reale (6,5M+ sentenze) sarà attivato a breve</span>
           )}
         </div>
+
+        {/* Collega la ricerca a un cliente: le sentenze salvate finiscono nel suo fascicolo */}
+        {clienti.length > 0 && (
+          <div className="mx-auto mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm">
+            <Link2 size={14} className="text-muted-2" />
+            <select
+              value={clienteId || ""}
+              onChange={(e) => setClienteId(e.target.value || undefined)}
+              className="max-w-[220px] bg-transparent text-sm outline-none"
+            >
+              <option value="">Ricerca non collegata a un cliente</option>
+              {clienti.map((c) => (
+                <option key={c.id} value={c.id}>Per: {nomeCliente(c)}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="mx-auto mt-8 max-w-3xl">
@@ -175,7 +196,15 @@ function Ricerche() {
               <p className="py-10 text-center text-muted-2">Nessuna sentenza trovata. Prova a modificare i termini di ricerca.</p>
             )}
             {risultati.map((s) => (
-              <RisultatoCard key={s.id} s={s} fav={preferiti.some((p) => p.id === s.id)} onFav={() => togglePreferito(s)} />
+              <RisultatoCard
+                key={s.id}
+                s={s}
+                fav={preferiti.some((p) => p.id === s.id)}
+                onFav={() => togglePreferito(s)}
+                clienteNomeSel={clienteId ? nomeCliente(clienti.find((c) => c.id === clienteId)!) : undefined}
+                salvata={!!clienteId && sentenzeCliente.some((x) => x.clienteId === clienteId && x.sentenza.id === s.id)}
+                onSalvaCliente={clienteId ? () => addSentenzaCliente(clienteId, s) : undefined}
+              />
             ))}
           </div>
         )}
@@ -184,7 +213,21 @@ function Ricerche() {
   );
 }
 
-function RisultatoCard({ s, fav, onFav }: { s: SentenzaRisultato; fav: boolean; onFav: () => void }) {
+function RisultatoCard({
+  s,
+  fav,
+  onFav,
+  clienteNomeSel,
+  salvata,
+  onSalvaCliente,
+}: {
+  s: SentenzaRisultato;
+  fav: boolean;
+  onFav: () => void;
+  clienteNomeSel?: string;
+  salvata?: boolean;
+  onSalvaCliente?: () => void;
+}) {
   const [aperta, setAperta] = useState(false);
   return (
     <div className="card p-5">
@@ -201,6 +244,17 @@ function RisultatoCard({ s, fav, onFav }: { s: SentenzaRisultato; fav: boolean; 
           <Star size={18} fill={fav ? "currentColor" : "none"} />
         </button>
       </div>
+      {onSalvaCliente && (
+        <button
+          onClick={onSalvaCliente}
+          disabled={salvata}
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+            salvata ? "text-success" : "bg-primary-soft text-primary hover:bg-primary-soft/70"
+          }`}
+        >
+          {salvata ? <><Check size={14} /> Salvata nel fascicolo di {clienteNomeSel}</> : <><FolderPlus size={14} /> Salva nel fascicolo di {clienteNomeSel}</>}
+        </button>
+      )}
       <p className="mt-3 text-sm leading-relaxed text-foreground/90">{s.massima}</p>
       {s.testoCompleto && (
         <div className="mt-3 border-t border-border pt-3">

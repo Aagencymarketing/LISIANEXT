@@ -10,12 +10,18 @@ import type {
   ConversazioneAI,
   VoceCronologia,
   SentenzaRisultato,
+  SentenzaCliente,
 } from "./types";
 import { CLIENTI_SEED } from "./seed";
 import { uuid, oggi } from "./utils";
 import * as gdb from "./db/gestionale";
 import { caricaCronologia, insertCronologia } from "./db/cronologia";
 import { caricaPreferiti, addPreferitoDb, removePreferitoDb } from "./db/preferiti";
+import {
+  caricaSentenzeCliente,
+  addSentenzaClienteDb,
+  removeSentenzaClienteDb,
+} from "./db/sentenzeCliente";
 import {
   caricaConversazioni,
   insertConversazione,
@@ -36,6 +42,7 @@ interface AppState {
   conversazioni: ConversazioneAI[];
   cronologia: VoceCronologia[];
   preferiti: SentenzaRisultato[];
+  sentenzeCliente: SentenzaCliente[];
   dataLoaded: boolean;
 
   // ---- UI (persistite in localStorage) ----
@@ -80,6 +87,8 @@ interface AppState {
   removeConversazione: (id: string) => void;
   addCronologia: (v: Omit<VoceCronologia, "id" | "createdAt">) => void;
   togglePreferito: (sentenza: SentenzaRisultato) => void;
+  addSentenzaCliente: (clienteId: string, sentenza: SentenzaRisultato) => void;
+  removeSentenzaCliente: (id: string) => void;
 
   // ---- UI azioni ----
   setTheme: (t: Theme) => void;
@@ -104,6 +113,7 @@ export const useApp = create<AppState>()(
       conversazioni: [],
       cronologia: [],
       preferiti: [],
+      sentenzeCliente: [],
       dataLoaded: false,
 
       theme: "light",
@@ -122,17 +132,18 @@ export const useApp = create<AppState>()(
             return fallback;
           }
         };
-        const [clienti, cronologia, preferiti, conversazioni] = await Promise.all([
+        const [clienti, cronologia, preferiti, conversazioni, sentenzeCliente] = await Promise.all([
           safe(gdb.caricaClienti(), [] as Cliente[]),
           safe(caricaCronologia(), [] as VoceCronologia[]),
           safe(caricaPreferiti(), [] as SentenzaRisultato[]),
           safe(caricaConversazioni(), [] as ConversazioneAI[]),
+          safe(caricaSentenzeCliente(), [] as SentenzaCliente[]),
         ]);
-        set({ clienti, cronologia, preferiti, conversazioni, dataLoaded: true });
+        set({ clienti, cronologia, preferiti, conversazioni, sentenzeCliente, dataLoaded: true });
       },
 
       clearLocal: () =>
-        set({ clienti: [], conversazioni: [], cronologia: [], preferiti: [], dataLoaded: false }),
+        set({ clienti: [], conversazioni: [], cronologia: [], preferiti: [], sentenzeCliente: [], dataLoaded: false }),
 
       caricaEsempi: async () => {
         for (const seed of CLIENTI_SEED) {
@@ -312,6 +323,19 @@ export const useApp = create<AppState>()(
             : [sentenza, ...s.preferiti],
         }));
         persistWrite(presente ? removePreferitoDb(sentenza.id) : addPreferitoDb(sentenza));
+      },
+
+      addSentenzaCliente: (clienteId, sentenza) => {
+        // niente duplicati della stessa sentenza per lo stesso cliente
+        if (get().sentenzeCliente.some((x) => x.clienteId === clienteId && x.sentenza.id === sentenza.id)) return;
+        const rec: SentenzaCliente = { id: uuid(), clienteId, sentenza, createdAt: oggi() };
+        set((s) => ({ sentenzeCliente: [rec, ...s.sentenzeCliente] }));
+        persistWrite(addSentenzaClienteDb(rec));
+      },
+
+      removeSentenzaCliente: (id) => {
+        set((s) => ({ sentenzeCliente: s.sentenzeCliente.filter((x) => x.id !== id) }));
+        persistWrite(removeSentenzaClienteDb(id));
       },
 
       setTheme: (t) => set({ theme: t }),
