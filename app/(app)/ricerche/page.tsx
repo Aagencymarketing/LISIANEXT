@@ -10,6 +10,8 @@ import {
 } from "@/lib/ai/sentenze";
 import { nomeCliente, type SentenzaRisultato } from "@/lib/types";
 import { Badge } from "@/components/ui";
+import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
+import { RicerchePanel, RicerchePanelDrawer } from "@/components/ai/RicerchePanel";
 import { Search, Star, Database, Loader2, SlidersHorizontal, ChevronDown, Link2, FolderPlus, Check } from "lucide-react";
 
 const ESEMPI = [
@@ -28,6 +30,8 @@ function Ricerche() {
   const clienti = useApp((s) => s.clienti);
   const sentenzeCliente = useApp((s) => s.sentenzeCliente);
   const addSentenzaCliente = useApp((s) => s.addSentenzaCliente);
+  const aiPanelOpen = useApp((s) => s.aiPanelOpen);
+  const toggleAiPanel = useApp((s) => s.toggleAiPanel);
 
   const [clienteId, setClienteId] = useState<string | undefined>(undefined);
   const [modo, setModo] = useState<Modo>("testo");
@@ -82,6 +86,13 @@ function Ricerche() {
 
   return (
     <div className="animate-in">
+     <div className="flex gap-5">
+      <div className="min-w-0 flex-1">
+       {!aiPanelOpen && (
+         <div className="mb-3 flex justify-end">
+           <AiPanelOpenButton label="Ricerche fatte" onClick={toggleAiPanel} />
+         </div>
+       )}
       <div className="mx-auto max-w-3xl text-center">
         <h1 className="text-2xl font-bold sm:text-3xl">Ricerche Legali</h1>
         <p className="mt-1 text-muted">Cerca nella banca dati giurisprudenziale</p>
@@ -209,6 +220,18 @@ function Ricerche() {
           </div>
         )}
       </div>
+      </div>
+
+      {aiPanelOpen && (
+        <aside className="hidden w-72 shrink-0 lg:block">
+          <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
+            <RicerchePanel attivo={q} onCerca={cerca} onClose={toggleAiPanel} />
+          </div>
+        </aside>
+      )}
+     </div>
+
+     <RicerchePanelDrawer open={aiPanelOpen} attivo={q} onCerca={cerca} onClose={toggleAiPanel} />
     </div>
   );
 }
