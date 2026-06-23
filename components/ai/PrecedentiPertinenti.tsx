@@ -25,13 +25,18 @@ export function PrecedentiPertinenti({
   const togglePreferito = useApp((s) => s.togglePreferito);
   const [stato, setStato] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [risultati, setRisultati] = useState<SentenzaRisultato[]>([]);
+  const [mostraAltre, setMostraAltre] = useState(false);
   const [errore, setErrore] = useState("");
 
   if (!SENTENZE_COLLEGATO || !testo.trim()) return null;
 
+  // Quante sentenze nel primo blocco ("le più pertinenti"); il resto va nel secondo.
+  const PRIMO_BLOCCO = 4;
+
   const cerca = async () => {
     setStato("loading");
     setErrore("");
+    setMostraAltre(false);
     try {
       setRisultati(await trovaPrecedenti(testo, { materia, leggera }));
       setStato("done");
@@ -41,18 +46,25 @@ export function PrecedentiPertinenti({
     }
   };
 
+  const card = (s: SentenzaRisultato) => (
+    <PrecedenteCard key={s.id} s={s} fav={preferiti.some((p) => p.id === s.id)} onFav={() => togglePreferito(s)} />
+  );
+
+  const primi = risultati.slice(0, PRIMO_BLOCCO);
+  const altre = risultati.slice(PRIMO_BLOCCO);
+
   return (
     <div className="mt-4 border-t border-border pt-4">
       {stato === "idle" && (
         <Button variant="soft" size="sm" onClick={cerca}>
-          <Scale size={16} /> Trova precedenti pertinenti
+          <Scale size={16} /> Trova sentenze pertinenti
         </Button>
       )}
 
       {stato === "loading" && (
         <div className="flex items-center gap-2 text-sm text-muted">
           <Loader2 size={16} className="animate-spin text-primary" />
-          Cerco nella banca dati e filtro i precedenti più pertinenti…
+          Cerco nella banca dati e filtro le sentenze più pertinenti…
         </div>
       )}
 
@@ -64,20 +76,35 @@ export function PrecedentiPertinenti({
       )}
 
       {stato === "done" && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs text-muted-2">
-            <Database size={13} />
-            {risultati.length > 0
-              ? `${risultati.length} precedenti pertinenti dalla banca dati reale`
-              : "Nessun precedente realmente pertinente trovato."}
-          </div>
-          {risultati.map((s) => (
-            <PrecedenteCard key={s.id} s={s} fav={preferiti.some((p) => p.id === s.id)} onFav={() => togglePreferito(s)} />
-          ))}
-          {risultati.length > 0 && (
-            <button onClick={cerca} className="text-xs font-medium text-primary hover:underline">
-              Aggiorna ricerca
-            </button>
+        <div className="space-y-3">
+          {risultati.length === 0 ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-2">
+              <Database size={13} /> Nessuna sentenza realmente pertinente trovata.
+            </div>
+          ) : (
+            <>
+              {/* Primo blocco: le più pertinenti */}
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Database size={13} className="text-primary" />
+                  Queste sono le sentenze più pertinenti che ho trovato
+                </p>
+                {primi.map(card)}
+              </div>
+
+              {/* Secondo blocco: altre pertinenti (una sola volta) */}
+              {altre.length > 0 && !mostraAltre && (
+                <Button variant="soft" size="sm" onClick={() => setMostraAltre(true)}>
+                  <Scale size={16} /> Trova altre sentenze pertinenti
+                </Button>
+              )}
+              {altre.length > 0 && mostraAltre && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <p className="text-xs font-semibold text-foreground">Queste sono altre sentenze pertinenti</p>
+                  {altre.map(card)}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

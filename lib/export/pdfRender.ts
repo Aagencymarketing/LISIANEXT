@@ -49,56 +49,87 @@ function ensure(cur: Cursor, h: number) {
   }
 }
 
-/** Disegna una sequenza di run (con grassetto/corsivo inline) con a-capo automatico. */
+interface Parola {
+  t: string;
+  b: boolean;
+  i: boolean;
+  w: number;
+}
+
+/**
+ * Disegna una sequenza di run (con grassetto/corsivo inline) con a-capo
+ * automatico. Con `justify` i paragrafi sono giustificati (tranne l'ultima riga).
+ */
 function flowRuns(
   cur: Cursor,
   runs: Run[],
-  opt: { size: number; bold?: boolean; italic?: boolean; x0?: number; x1?: number },
+  opt: { size: number; bold?: boolean; italic?: boolean; x0?: number; x1?: number; justify?: boolean },
 ) {
   const { doc } = cur;
   const size = opt.size;
-  const xStart = opt.x0 ?? M.left;
-  const xWrap = opt.x1 ?? M.left;
+  const x0 = opt.x0 ?? M.left;
+  const x1 = opt.x1 ?? M.left;
   const lineH = lh(size);
 
-  // Tokenizza in parole con stile, mantenendo gli spazi come separatori.
-  const words: { t: string; b?: boolean; i?: boolean }[] = [];
+  // Tokenizza in parole con stile e larghezza.
+  const parole: Parola[] = [];
   for (const r of runs) {
     const b = !!r.bold || !!opt.bold;
     const i = !!r.italic || !!opt.italic;
-    const parts = safe(r.text).split(/(\s+)/);
-    for (const p of parts) {
-      if (p === "") continue;
-      if (/^\s+$/.test(p)) words.push({ t: " ", b, i });
-      else words.push({ t: p, b, i });
+    for (const w of safe(r.text).split(/\s+/)) {
+      if (w === "") continue;
+      setFont(doc, size, b, i);
+      parole.push({ t: w, b, i, w: doc.getTextWidth(w) });
     }
+  }
+  if (parole.length === 0) {
+    cur.y += lineH;
+    return;
   }
 
-  ensure(cur, lineH);
-  let x = xStart;
-  let lineStart = true;
-  for (const w of words) {
-    if (w.t === " ") {
-      if (!lineStart) {
-        setFont(doc, size, w.b, w.i);
-        x += doc.getTextWidth(" ");
-      }
-      continue;
+  setFont(doc, size, false, false);
+  const spazio = doc.getTextWidth(" ");
+
+  // Spezza in righe (greedy), considerando il margine sinistro diverso per la
+  // prima riga (x0) e per le successive (x1).
+  const righe: Parola[][] = [];
+  let riga: Parola[] = [];
+  let usata = 0;
+  for (const p of parole) {
+    const left = righe.length === 0 ? x0 : x1;
+    const avail = RIGHT - left;
+    const add = (riga.length === 0 ? 0 : spazio) + p.w;
+    if (riga.length > 0 && usata + add > avail) {
+      righe.push(riga);
+      riga = [p];
+      usata = p.w;
+    } else {
+      riga.push(p);
+      usata += add;
     }
-    setFont(doc, size, w.b, w.i);
-    const ww = doc.getTextWidth(w.t);
-    if (!lineStart && x + ww > RIGHT) {
-      cur.y += lineH;
-      ensure(cur, lineH);
-      x = xWrap;
-      lineStart = true;
-    }
-    // parola singola più larga della riga: lasciala comunque (jsPDF non spezza)
-    doc.text(w.t, x, cur.y + ascent(size));
-    x += ww;
-    lineStart = false;
   }
-  cur.y += lineH;
+  if (riga.length) righe.push(riga);
+
+  // Render riga per riga.
+  for (let li = 0; li < righe.length; li++) {
+    ensure(cur, lineH);
+    const left = li === 0 ? x0 : x1;
+    const r = righe[li];
+    const ultima = li === righe.length - 1;
+    let gap = spazio;
+    if (opt.justify && !ultima && r.length > 1) {
+      const larghParole = r.reduce((a, p) => a + p.w, 0);
+      gap = (RIGHT - left - larghParole) / (r.length - 1);
+      if (gap < spazio) gap = spazio; // niente giustificazione "compressa"
+    }
+    let x = left;
+    for (const p of r) {
+      setFont(doc, size, p.b, p.i);
+      doc.text(p.t, x, cur.y + ascent(size));
+      x += p.w + gap;
+    }
+    cur.y += lineH;
+  }
 }
 
 function heading(cur: Cursor, runs: Run[], level: number) {
@@ -211,7 +242,7 @@ export function renderPdf(doc: Doc, titolo: string, markdown: string) {
   for (const b of parseBlocks(markdown)) {
     if (b.type === "h") heading(cur, b.runs, b.level);
     else if (b.type === "p") {
-      flowRuns(cur, b.runs, { size: SIZE.body });
+      flowRuns(cur, b.runs, { size: SIZE.body, justify: true });
       cur.y += 1.4;
     } else if (b.type === "ul") {
       for (const it of b.items) listItem(cur, it, "•  ");

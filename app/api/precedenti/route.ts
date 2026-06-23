@@ -74,8 +74,9 @@ export async function POST(req: Request) {
 
     // --- Step C: filtro di pertinenza ---
     if (body.leggera) {
-      // versione leggera (risposta immediata): top 3 senza gate AI
-      return Response.json({ risultati: risultati.slice(0, 3) });
+      // versione leggera (risposta immediata): top risultati senza gate AI
+      // (la UI mostra i primi 4 come "più pertinenti" e il resto come "altre").
+      return Response.json({ risultati: risultati.slice(0, 6) });
     }
 
     const elenco = risultati
