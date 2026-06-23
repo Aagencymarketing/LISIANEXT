@@ -14,13 +14,15 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const { user } = useUser();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+      const t = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
+      if (notifRef.current && !notifRef.current.contains(t)) setNotifOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -37,17 +39,26 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-semibold">
-        <span className="grid h-4 w-4 place-items-center rounded-full bg-primary-soft text-[10px] text-primary">
-          €
-        </span>
-        0,00
-      </div>
+      {/* Notifiche */}
+      <div className="relative" ref={notifRef}>
+        <IconButton onClick={() => setNotifOpen((v) => !v)} aria-label="Notifiche">
+          <Bell size={19} />
+        </IconButton>
 
-      <IconButton aria-label="Notifiche" className="relative">
-        <Bell size={19} />
-        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
-      </IconButton>
+        {notifOpen && (
+          <div className="absolute right-0 top-full mt-2 w-72 animate-in rounded-xl border border-border bg-surface p-1 shadow-[var(--shadow-pop)]">
+            <div className="border-b border-border px-3 py-2">
+              <p className="text-sm font-semibold">Notifiche</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 px-3 py-7 text-center">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-muted-2">
+                <Bell size={18} />
+              </span>
+              <p className="text-sm text-muted-2">Nessuna notifica al momento.</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <IconButton onClick={toggleTheme} aria-label="Cambia tema">
         {hydrated && theme === "dark" ? <Moon size={19} /> : <Sun size={19} />}
