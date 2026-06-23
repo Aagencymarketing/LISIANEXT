@@ -293,12 +293,12 @@ export default function ClienteDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-5 flex gap-1 border-b border-border">
+      <div className="mb-5 flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`relative px-4 py-2.5 text-sm font-medium transition ${
+            className={`relative shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition ${
               tab === t.key ? "text-primary" : "text-muted hover:text-foreground"
             }`}
           >
@@ -375,11 +375,11 @@ export default function ClienteDetailPage() {
       {/* LAVORI AI */}
       {tab === "lavori" && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted">
               Tutti i pareri, atti, risposte e analisi generati per questo cliente — apribili ed esportabili.
             </p>
-            <Button size="sm" onClick={() => apriAnalizza(undefined)}>
+            <Button size="sm" onClick={() => apriAnalizza(undefined)} className="shrink-0">
               <Sparkles size={15} /> Analizza ed esegui
             </Button>
           </div>
