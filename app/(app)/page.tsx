@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import { formatData } from "@/lib/utils";
+import { useUser } from "@/lib/auth/useUser";
+import { formatData, primoNome } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 import { linkVoceCronologia } from "@/lib/cronologiaLink";
 import {
@@ -17,6 +18,8 @@ export default function DashboardPage() {
   const clienti = useApp((s) => s.clienti);
   const cronologia = useApp((s) => s.cronologia);
   const preferiti = useApp((s) => s.preferiti);
+  const { user } = useUser();
+  const saluto = primoNome(user?.nome);
 
   const causeAttive = clienti.reduce(
     (acc, c) =>
@@ -35,10 +38,12 @@ export default function DashboardPage() {
 
   return (
     <div className="animate-in">
-      {/* Intestazione */}
+      {/* Intestazione — saluto */}
       <div className="mb-6 pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">Panoramica</h1>
-        <p className="mt-1 text-muted">Lo stato dello studio e ciò che hai fatto di recente.</p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Ciao, <span className="text-primary">{saluto}</span>
+        </h1>
+        <p className="mt-1 text-muted">Questo è lo stato dello studio e ciò che hai fatto di recente.</p>
       </div>
 
       {/* Stats */}
