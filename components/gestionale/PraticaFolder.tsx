@@ -3,23 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import type { Cliente, Causa, ConversazioneAI, ModuloAI } from "@/lib/types";
+import type { Cliente, Causa } from "@/lib/types";
 import { STATO_CAUSA, MATERIA_CAUSA } from "@/lib/labels";
 import { formatData, formatEuro } from "@/lib/utils";
-import { Badge, Button, Select, type Tone } from "@/components/ui";
-import { Markdown } from "@/components/Markdown";
-import { EsportaButtons } from "@/components/ai/EsportaButtons";
+import { Badge, Button, Select } from "@/components/ui";
+import { ElaboratoCard } from "@/components/gestionale/ElaboratoCard";
 import {
   ChevronDown, Sparkles, FileText, Download, Trash2, FolderOpen,
   Scale, CalendarClock, Gavel,
 } from "lucide-react";
-
-const BADGE_MODULO: Record<ModuloAI, { label: string; tone: Tone }> = {
-  risposta_immediata: { label: "Risposta AI", tone: "blue" },
-  pareri: { label: "Parere AI", tone: "violet" },
-  redattore: { label: "Atto AI", tone: "amber" },
-  ricerche: { label: "Ricerca", tone: "gray" },
-};
 
 export function PraticaFolder({
   cliente,
@@ -110,7 +102,7 @@ export function PraticaFolder({
             ) : (
               <div className="space-y-2">
                 {elaborati.map((c) => (
-                  <ElaboratoItem key={c.id} c={c} onElimina={() => removeConversazione(c.id)} />
+                  <ElaboratoCard key={c.id} c={c} onElimina={() => removeConversazione(c.id)} />
                 ))}
               </div>
             )}
@@ -171,35 +163,4 @@ function Sezione({ titolo, count, icona, children }: { titolo: string; count: nu
 
 function Vuoto({ testo }: { testo: string }) {
   return <p className="text-sm text-muted-2">{testo}</p>;
-}
-
-function ElaboratoItem({ c, onElimina }: { c: ConversazioneAI; onElimina: () => void }) {
-  const [aperto, setAperto] = useState(false);
-  const meta = BADGE_MODULO[c.modulo];
-  const contenuto = c.messaggi.find((m) => m.ruolo === "assistente")?.contenuto || "";
-  return (
-    <div className="rounded-xl border border-border bg-surface">
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <button onClick={() => setAperto((v) => !v)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <ChevronDown size={15} className={`shrink-0 text-muted-2 transition ${aperto ? "rotate-180" : ""}`} />
-          <Badge tone={meta.tone}>{meta.label}</Badge>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.titolo}</span>
-          <span className="shrink-0 text-xs text-muted-2">{formatData(c.updatedAt)}</span>
-        </button>
-        <button onClick={onElimina} className="shrink-0 rounded p-1 text-muted-2 hover:text-danger" aria-label="Elimina elaborato">
-          <Trash2 size={14} />
-        </button>
-      </div>
-      {aperto && (
-        <div className="border-t border-border p-4">
-          <div className="max-h-[60vh] overflow-y-auto">
-            <Markdown>{contenuto}</Markdown>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-            <EsportaButtons titolo={c.titolo} testo={contenuto} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }

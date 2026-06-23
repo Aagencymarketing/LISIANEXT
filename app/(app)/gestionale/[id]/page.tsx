@@ -15,6 +15,7 @@ import { AttivitaForm, type AttivitaDraft } from "@/components/gestionale/Attivi
 import { ClienteAI } from "@/components/gestionale/ClienteAI";
 import { AnalizzaEsegui } from "@/components/gestionale/AnalizzaEsegui";
 import { PraticaFolder } from "@/components/gestionale/PraticaFolder";
+import { ElaboratoCard } from "@/components/gestionale/ElaboratoCard";
 import { useUser } from "@/lib/auth/useUser";
 import {
   uploadDocumento,
@@ -39,7 +40,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-type Tab = "panoramica" | "pratiche" | "storico" | "documenti";
+type Tab = "panoramica" | "pratiche" | "lavori" | "storico" | "documenti";
 
 interface TimelineItem {
   id: string;
@@ -157,6 +158,12 @@ export default function ClienteDetailPage() {
     );
   }
 
+  // Tutti i lavori AI collegati al cliente (anche senza pratica): pareri, atti,
+  // risposte interattive, "Analizza ed esegui".
+  const lavoriCliente = conversazioni
+    .filter((c) => c.clienteId === cliente.id)
+    .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
+
   const causeAttive = cliente.cause.filter(
     (c) => !["chiusa_vinta", "chiusa_persa", "archiviata"].includes(c.stato),
   );
@@ -230,6 +237,7 @@ export default function ClienteDetailPage() {
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: "panoramica", label: "Panoramica" },
     { key: "pratiche", label: "Pratiche", count: cliente.cause.length },
+    { key: "lavori", label: "Lavori AI", count: lavoriCliente.length },
     { key: "storico", label: "Storico", count: storicoOrdinato.length },
     { key: "documenti", label: "Documenti", count: cliente.documenti.length },
   ];
@@ -354,6 +362,34 @@ export default function ClienteDetailPage() {
                 onEliminaDoc={eliminaDoc}
               />
             ))
+          )}
+        </div>
+      )}
+
+      {/* LAVORI AI */}
+      {tab === "lavori" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted">
+              Tutti i pareri, atti, risposte e analisi generati per questo cliente — apribili ed esportabili.
+            </p>
+            <Button size="sm" onClick={() => apriAnalizza(undefined)}>
+              <Sparkles size={15} /> Analizza ed esegui
+            </Button>
+          </div>
+          {lavoriCliente.length === 0 ? (
+            <EmptyState
+              icon={<Sparkles size={24} />}
+              title="Nessun lavoro AI"
+              description="Usa “Analizza ed esegui”, oppure collega questo cliente da Pareri, Atti o Risposte interattive: i lavori compariranno qui."
+              action={<Button size="sm" onClick={() => apriAnalizza(undefined)}><Sparkles size={15} /> Analizza ed esegui</Button>}
+            />
+          ) : (
+            <div className="space-y-2">
+              {lavoriCliente.map((c) => (
+                <ElaboratoCard key={c.id} c={c} onElimina={() => removeConversazione(c.id)} />
+              ))}
+            </div>
           )}
         </div>
       )}
