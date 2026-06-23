@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { formatData } from "@/lib/utils";
 import { Badge, Input, PageHeader, EmptyState } from "@/components/ui";
+import { linkVoceCronologia } from "@/lib/cronologiaLink";
 import { Search, MessageSquare, Clock } from "lucide-react";
 
 export default function CronologiaPage() {
@@ -33,7 +34,7 @@ export default function CronologiaPage() {
           {filtrate.map((v) => (
             <Link
               key={v.id}
-              href={`/ricerche?q=${encodeURIComponent(v.testo)}`}
+              href={linkVoceCronologia(v)}
               className="card group flex items-center gap-3 p-4 transition hover:bg-surface-hover"
             >
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent">

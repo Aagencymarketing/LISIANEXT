@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { useAIStream } from "@/components/ai/useAIStream";
 import { ContextPicker } from "@/components/ai/ContextPicker";
@@ -19,8 +20,10 @@ import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
 import { FileSearch, Send, Square, Check, Plus, User, Copy } from "lucide-react";
 
-export default function PareriPage() {
+function PareriInner() {
+  const params = useSearchParams();
   const clienti = useApp((s) => s.clienti);
+  const conversazioni = useApp((s) => s.conversazioni);
   const addCronologia = useApp((s) => s.addCronologia);
   const addConversazione = useApp((s) => s.addConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
@@ -60,7 +63,6 @@ export default function PareriPage() {
   const genera = async () => {
     if (!quesito.trim()) return;
     setConvId(undefined);
-    addCronologia({ testo: quesito.slice(0, 120), tipo: "Parere" });
     const documentiInline = files.length ? await Promise.all(files.map(fileToInline)) : undefined;
     const testo = await run(quesito, { cliente, causa }, { variante, documentiInline });
     if (testo) {
@@ -80,8 +82,22 @@ export default function PareriPage() {
         updatedAt: oggi(),
       };
       addConversazione(conv);
+      addCronologia({ testo: quesito.slice(0, 120), tipo: "Parere", convId: id, modulo: "pareri" });
     }
   };
+
+  // Apertura diretta di un parere salvato (da Cronologia / Home: ?apri=<id>)
+  const aperturaRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = params.get("apri");
+    if (!id || aperturaRef.current === id) return;
+    const conv = conversazioni.find((c) => c.id === id && c.modulo === "pareri");
+    if (conv) {
+      aperturaRef.current = id;
+      apri(conv);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, conversazioni]);
 
   const nuovo = () => {
     setQuesito("");
@@ -222,5 +238,13 @@ export default function PareriPage() {
         onClose={toggleAiPanel}
       />
     </div>
+  );
+}
+
+export default function PareriPage() {
+  return (
+    <Suspense fallback={null}>
+      <PareriInner />
+    </Suspense>
   );
 }

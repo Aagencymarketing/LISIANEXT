@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { useAIStream } from "@/components/ai/useAIStream";
@@ -23,6 +23,7 @@ import { PenLine, Sparkles, Square, Check, Copy, Plus, User } from "lucide-react
 function Redattore() {
   const params = useSearchParams();
   const clienti = useApp((s) => s.clienti);
+  const conversazioni = useApp((s) => s.conversazioni);
   const addCronologia = useApp((s) => s.addCronologia);
   const addConversazione = useApp((s) => s.addConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
@@ -67,7 +68,6 @@ function Redattore() {
   const genera = async () => {
     if (!oggetto.trim()) return;
     setConvId(undefined);
-    addCronologia({ testo: `${tipoAttoEff} — ${oggetto.slice(0, 80)}`, tipo: "Atto" });
     const documentiInline = files.length ? await Promise.all(files.map(fileToInline)) : undefined;
     const testo = await run(oggetto, { cliente, causa, tipoAtto: tipoAttoEff }, { documentiInline });
     if (testo) {
@@ -87,8 +87,27 @@ function Redattore() {
         updatedAt: oggi(),
       };
       addConversazione(conv);
+      addCronologia({
+        testo: `${tipoAttoEff} — ${oggetto.slice(0, 80)}`,
+        tipo: "Atto",
+        convId: id,
+        modulo: "redattore",
+      });
     }
   };
+
+  // Apertura diretta di un atto salvato (da Cronologia / Home: ?apri=<id>)
+  const aperturaRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = params.get("apri");
+    if (!id || aperturaRef.current === id) return;
+    const conv = conversazioni.find((c) => c.id === id && c.modulo === "redattore");
+    if (conv) {
+      aperturaRef.current = id;
+      apri(conv);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, conversazioni]);
 
   const copia = async () => {
     await navigator.clipboard?.writeText(output);

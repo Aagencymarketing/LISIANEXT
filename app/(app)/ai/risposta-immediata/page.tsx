@@ -23,6 +23,7 @@ const ESEMPI = [
 
 function Chat() {
   const params = useSearchParams();
+  const conversazioni = useApp((s) => s.conversazioni);
   const addCronologia = useApp((s) => s.addCronologia);
   const addConversazione = useApp((s) => s.addConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
@@ -74,8 +75,8 @@ function Chat() {
     setInput("");
     const userMsg: MessaggioChat = { id: uid("m"), ruolo: "utente", contenuto: t, createdAt: oggi() };
     const conUtente = [...messaggi, userMsg];
+    const primoMessaggio = messaggi.length === 0;
     setMessaggi(conUtente);
-    addCronologia({ testo: t, tipo: "Chat" });
 
     setLoading(true);
     setStreaming("");
@@ -109,6 +110,9 @@ function Chat() {
       const completi = [...conUtente, assistMsg];
       setMessaggi(completi);
       persisti(completi, conUtente[0].contenuto);
+      if (primoMessaggio) {
+        addCronologia({ testo: t, tipo: "Chat", convId: convIdRef.current, modulo: "risposta_immediata" });
+      }
     }
     setStreaming("");
     setLoading(false);
@@ -165,6 +169,19 @@ function Chat() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
+
+  // Apertura diretta di una conversazione salvata (da Cronologia / Home: ?apri=<id>)
+  const aperturaRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = params.get("apri");
+    if (!id || aperturaRef.current === id) return;
+    const conv = conversazioni.find((c) => c.id === id && c.modulo === "risposta_immediata");
+    if (conv) {
+      aperturaRef.current = id;
+      apri(conv);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, conversazioni]);
 
   const vuota = messaggi.length === 0 && !streaming;
   const trascrizione = messaggi

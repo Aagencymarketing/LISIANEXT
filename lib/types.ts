@@ -122,6 +122,10 @@ export interface VoceCronologia {
   tipo: "Sentenze" | "Massime" | "Parere" | "Atto" | "Chat";
   occorrenze?: number;
   createdAt: string;
+  // Collegamento al lavoro salvato, per riaprire la voce nella sezione giusta
+  // (e con il testo integrale, non troncato).
+  convId?: string;
+  modulo?: ModuloAI;
 }
 
 export interface SentenzaRisultato {

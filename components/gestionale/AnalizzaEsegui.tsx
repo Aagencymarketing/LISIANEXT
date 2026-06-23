@@ -150,7 +150,7 @@ export function AnalizzaEsegui({
       };
       addConversazione(conv);
       const tipoCron = azione === "pareri" ? "Parere" : azione === "redattore" ? "Atto" : "Chat";
-      addCronologia({ testo: titolo, tipo: tipoCron });
+      addCronologia({ testo: titolo, tipo: tipoCron, convId: conv.id, modulo: azione });
       setTitoloSalvato(titolo);
       setFatto(true);
     }
