@@ -16,7 +16,7 @@ const MODELLO_GIUDICE = "claude-haiku-4-5";
 interface Body {
   testo: string; // parere/atto/risposta generata
   materia?: string;
-  leggera?: boolean; // true = risposta immediata (filtro di pertinenza più lasco/saltato)
+  leggera?: boolean; // (deprecato) un tempo saltava il filtro per le risposte interattive; ora ignorato: il filtro severo vale ovunque
 }
 
 /** Estrae il primo blocco JSON ({...} o [...]) dal testo del modello. */
@@ -94,11 +94,9 @@ export async function POST(req: Request) {
     const pool = candidati.slice(0, 24);
 
     // --- Step C: filtro di pertinenza ---
-    if (body.leggera) {
-      // versione leggera (risposta immediata): top dal pool, senza gate AI.
-      return Response.json({ risultati: pool.slice(0, 6) });
-    }
-
+    // Uguale per pareri, atti E risposte interattive: la ricerca dei precedenti
+    // è manuale (l'utente la chiede), quindi dev'essere sempre selezionata con
+    // rigore — niente versione "leggera" senza filtro.
     const elenco = pool
       .map((s, i) => `${i}) ${s.estremi}\n${(s.massima || "").slice(0, 600)}`)
       .join("\n\n");
