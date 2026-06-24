@@ -6,8 +6,12 @@ import type { SentenzaRisultato } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-// Modello economico/veloce per i due step ausiliari (raffinamento + pertinenza).
-const MODELLO_AUX = "claude-haiku-4-5";
+// Step A (generazione query) e Step C (giudizio di pertinenza): modello veloce.
+// Il salto di qualità arriva dal RECUPERO ampio (più query, più candidati), non
+// dal modello del giudice: Haiku resta rapido e valuta candidati già buoni.
+// (Sonnet sul giudizio rendeva la risposta troppo lenta, >30s.)
+const MODELLO_QUERY = "claude-haiku-4-5";
+const MODELLO_GIUDICE = "claude-haiku-4-5";
 
 interface Body {
   testo: string; // parere/atto/risposta generata
@@ -50,43 +54,59 @@ export async function POST(req: Request) {
   const testoBreve = testo.slice(0, 7000);
 
   try {
-    // --- Step A: raffinamento della query di ricerca ---
+    // --- Step A: 2-3 query (angoli diversi = più recall su 6,5M sentenze) ---
     const a = await anthropic.messages.create({
-      model: MODELLO_AUX,
-      max_tokens: 400,
+      model: MODELLO_QUERY,
+      max_tokens: 500,
       system:
-        "Sei un assistente legale che prepara una ricerca giurisprudenziale italiana. Dato un testo legale (parere o atto), individua la questione giuridica centrale e produci una query di ricerca efficace per trovare sentenze pertinenti: usa gli istituti, i principi e le parole chiave decisive (non l'intero testo). Rispondi SOLO con JSON: {\"query\": string, \"materia\": string}.",
+        "Sei un assistente legale che prepara una ricerca giurisprudenziale italiana. Dal testo legale (parere o atto) individua le 2-3 questioni giuridiche centrali e, per CIASCUNA, produci una query di ricerca specifica ed efficace (istituti, principi e parole chiave decisive; NON l'intero testo). Le query devono coprire angoli diversi della stessa vicenda. Rispondi SOLO con JSON: {\"queries\": [string, ...], \"materia\": string}.",
       messages: [{ role: "user", content: testoBreve }],
     });
     const aText = a.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-    const refine = estraiJson<{ query?: string; materia?: string }>(aText) || {};
-    const query = (refine.query || "").trim() || testoBreve.slice(0, 300);
+    const refine = estraiJson<{ queries?: string[]; materia?: string }>(aText) || {};
+    let queries = (refine.queries || [])
+      .map((q) => (q || "").toString().trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    if (queries.length === 0) queries = [testoBreve.slice(0, 300)];
 
-    // --- Step B: ricerca sentenze reali (con filtro materia "duro") ---
-    const area = (refine.materia || body.materia || "").toString().toLowerCase().trim();
-    const base = { mode: "content", query_type: "sentenza", query, size: 8, offset: 0 };
-    let { risultati } = await searchSentenze(area ? { ...base, area } : base);
-    // fallback: se il filtro materia azzera i risultati, riprova senza filtro
-    if (risultati.length === 0 && area) {
-      ({ risultati } = await searchSentenze(base));
+    // --- Step B: recupero AMPIO ("rete larga"): più query, fino a ~40 candidati,
+    // SENZA filtro materia duro (escludeva buone sentenze) — la precisione la
+    // garantisce il filtro severo dello Step C. ---
+    const ricerche = await Promise.all(
+      queries.map((query) =>
+        searchSentenze({ mode: "content", query_type: "sentenza", query, size: 10, offset: 0 }).catch(
+          () => ({ risultati: [] as SentenzaRisultato[], total: 0 }),
+        ),
+      ),
+    );
+    const visti = new Set<string>();
+    const candidati: SentenzaRisultato[] = [];
+    for (const { risultati } of ricerche) {
+      for (const s of risultati) {
+        if (!visti.has(s.id)) {
+          visti.add(s.id);
+          candidati.push(s);
+        }
+      }
     }
-    if (risultati.length === 0) return Response.json({ risultati: [] });
+    if (candidati.length === 0) return Response.json({ risultati: [] });
+    const pool = candidati.slice(0, 24);
 
     // --- Step C: filtro di pertinenza ---
     if (body.leggera) {
-      // versione leggera (risposta immediata): top risultati senza gate AI
-      // (la UI mostra i primi 4 come "più pertinenti" e il resto come "altre").
-      return Response.json({ risultati: risultati.slice(0, 6) });
+      // versione leggera (risposta immediata): top dal pool, senza gate AI.
+      return Response.json({ risultati: pool.slice(0, 6) });
     }
 
-    const elenco = risultati
+    const elenco = pool
       .map((s, i) => `${i}) ${s.estremi}\n${(s.massima || "").slice(0, 600)}`)
       .join("\n\n");
     const c = await anthropic.messages.create({
-      model: MODELLO_AUX,
+      model: MODELLO_GIUDICE,
       max_tokens: 1200,
       system:
-        "Sei un giurista che valuta con SEVERITÀ la pertinenza di estratti di sentenze rispetto a un testo legale (parere/atto). Una sentenza è pertinente SOLO se affronta la STESSA specifica questione giuridica del testo (stesso istituto E stesso profilo concreto) ed è direttamente utile a sostegno o a contrasto della tesi. NON basta la stessa materia o un'attinenza generica: in caso di dubbio, scartala (pertinente=false). Meglio poche sentenze davvero centrate che molte vaghe. Rispondi SOLO con un JSON array, un oggetto per estratto: [{\"i\": indice, \"pertinente\": true|false, \"nota\": \"max 14 parole sul perché è davvero pertinente\"}].",
+        "Sei un giurista che seleziona con SEVERITÀ, tra estratti di sentenze, SOLO quelli pertinenti a un testo legale (parere/atto). Una sentenza è pertinente SOLO se affronta la STESSA specifica questione giuridica del testo (stesso istituto E stesso profilo concreto) ed è direttamente utile a sostegno o a contrasto della tesi. NON basta la stessa materia o un'attinenza generica: in caso di dubbio, SCARTALA. Meglio poche sentenze davvero centrate che molte vaghe. Restituisci SOLO le pertinenti (scarta tutte le altre), come JSON array ordinato dalla più pertinente alla meno: [{\"i\": indice, \"nota\": \"max 14 parole sul perché è pertinente\"}]. Se NESSUNA è pertinente, restituisci [].",
       messages: [
         {
           role: "user",
@@ -95,19 +115,23 @@ export async function POST(req: Request) {
       ],
     });
     const cText = c.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-    const giudizi =
-      estraiJson<{ i: number; pertinente: boolean; nota?: string }[]>(cText) || [];
+    const giudizi = estraiJson<{ i: number; nota?: string }[]>(cText);
+
+    // Ripiego SOLO se la lettura del giudizio fallisce per errore tecnico (JSON
+    // non parsabile). Se invece il giudizio è valido ma vuoto, è corretto non
+    // mostrare nulla: niente sentenze "finte". (Con ~24 candidati è raro.)
+    if (!giudizi) {
+      return Response.json({ risultati: pool.slice(0, 3) });
+    }
 
     const pertinenti: SentenzaRisultato[] = [];
     for (const g of giudizi) {
-      if (g && g.pertinente && risultati[g.i]) {
-        pertinenti.push({ ...risultati[g.i], nota: g.nota || undefined });
+      if (g && typeof g.i === "number" && pool[g.i]) {
+        pertinenti.push({ ...pool[g.i], nota: g.nota || undefined });
       }
     }
-    // fallback: se il modello non ha prodotto giudizi validi, restituisci i primi 3
-    const finali = pertinenti.length > 0 ? pertinenti : risultati.slice(0, 3);
 
-    return Response.json({ risultati: finali });
+    return Response.json({ risultati: pertinenti });
   } catch (e) {
     console.error("[api/precedenti]", e);
     return Response.json({ error: "Errore nella ricerca dei precedenti." }, { status: 502 });
