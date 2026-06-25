@@ -13,6 +13,7 @@ import { AiPanelOpenButton } from "@/components/ai/AiPanelOpenButton";
 import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
+import { SentenzeCitate } from "@/components/ai/SentenzeCitate";
 import { Markdown } from "@/components/Markdown";
 import { Button, Field, Textarea, Select } from "@/components/ui";
 import { TIPI_ATTO } from "@/lib/labels";
@@ -240,7 +241,10 @@ function Redattore() {
                   </div>
                 </div>
               )}
-              {!loading && <PrecedentiPertinenti testo={output} materia={causa?.materia} />}
+              {!loading && <SentenzeCitate testo={output} />}
+              {!loading && (
+                <PrecedentiPertinenti testo={output} materia={causa?.materia} etichetta="Trova altre sentenze" />
+              )}
             </div>
           )}
          </div>

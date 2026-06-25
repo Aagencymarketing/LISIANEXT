@@ -13,6 +13,7 @@ import { Elaborando } from "@/components/ai/Elaborando";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
 import { VarianteParereSelect } from "@/components/ai/VarianteParereSelect";
 import { PrecedentiPertinenti } from "@/components/ai/PrecedentiPertinenti";
+import { SentenzeCitate } from "@/components/ai/SentenzeCitate";
 import { Markdown } from "@/components/Markdown";
 import { Button, Textarea } from "@/components/ui";
 import { fileToInline, type VarianteParere } from "@/lib/ai/client";
@@ -206,7 +207,10 @@ function PareriInner() {
                   </div>
                 </div>
               )}
-              {!loading && <PrecedentiPertinenti testo={output} materia={causa?.materia} />}
+              {!loading && <SentenzeCitate testo={output} />}
+              {!loading && (
+                <PrecedentiPertinenti testo={output} materia={causa?.materia} etichetta="Trova altre sentenze" />
+              )}
             </div>
           )}
          </div>

@@ -17,11 +17,13 @@ export function PrecedentiPertinenti({
   materia,
   leggera,
   clienteId,
+  etichetta,
 }: {
   testo: string;
   materia?: string;
   leggera?: boolean;
   clienteId?: string;
+  etichetta?: string;
 }) {
   const preferiti = useApp((s) => s.preferiti);
   const togglePreferito = useApp((s) => s.togglePreferito);
@@ -72,7 +74,7 @@ export function PrecedentiPertinenti({
     <div className="mt-4 border-t border-border pt-4">
       {stato === "idle" && (
         <Button variant="soft" size="sm" onClick={cerca}>
-          <Scale size={16} /> Trova sentenze pertinenti
+          <Scale size={16} /> {etichetta || "Trova sentenze pertinenti"}
         </Button>
       )}
 
