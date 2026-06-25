@@ -344,7 +344,7 @@ export default function ClienteDetailPage() {
             {storicoOrdinato.length === 0 ? (
               <p className="text-sm text-muted-2">Nessuna attività registrata.</p>
             ) : (
-              <Timeline items={storicoOrdinato.slice(0, 4)} cause={cliente.cause} />
+              <Timeline items={storicoOrdinato.slice(0, 4)} cause={cliente.cause} onApriPratica={() => setTab("pratiche")} />
             )}
           </div>
         </div>
@@ -432,7 +432,7 @@ export default function ClienteDetailPage() {
             <EmptyState icon={<CalendarClock size={24} />} title="Storico vuoto" description="Registra le attività svolte per tenere traccia della pratica." />
           ) : (
             <div className="card p-5">
-              <Timeline items={storicoOrdinato} cause={cliente.cause} onDelete={eliminaStorico} />
+              <Timeline items={storicoOrdinato} cause={cliente.cause} onDelete={eliminaStorico} onApriPratica={() => setTab("pratiche")} />
             </div>
           )}
         </div>
@@ -592,10 +592,12 @@ function Timeline({
   items,
   cause,
   onDelete,
+  onApriPratica,
 }: {
   items: TimelineItem[];
   cause: { id: string; oggetto: string }[];
   onDelete?: (item: TimelineItem) => void;
+  onApriPratica?: (causaId: string) => void;
 }) {
   return (
     <ol className="relative space-y-5 border-l border-border pl-5">
@@ -616,7 +618,17 @@ function Timeline({
                 </div>
                 <p className="mt-1 font-medium">{a.titolo}</p>
                 {a.descrizione && <p className="mt-0.5 line-clamp-2 text-sm text-muted">{a.descrizione}</p>}
-                {causa && <p className="mt-1 text-xs text-muted-2">↳ {causa.oggetto}</p>}
+                {causa &&
+                  (onApriPratica ? (
+                    <button
+                      onClick={() => onApriPratica(causa.id)}
+                      className="mt-1 inline-flex items-center gap-1 rounded text-xs font-medium text-primary hover:underline"
+                    >
+                      ↳ {causa.oggetto}
+                    </button>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-2">↳ {causa.oggetto}</p>
+                  ))}
               </div>
               {onDelete && (
                 <button onClick={() => onDelete(a)} className="rounded p-1 text-muted-2 hover:text-danger" aria-label="Elimina">
