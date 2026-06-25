@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useApp } from "@/lib/store";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -18,6 +19,50 @@ export function AppShell({ children }: { children: ReactNode }) {
   const theme = useApp((s) => s.theme);
   const hydrated = useApp((s) => s.hasHydrated);
   const hydrateFromSupabase = useApp((s) => s.hydrateFromSupabase);
+  const clearLocal = useApp((s) => s.clearLocal);
+
+  // GUARDIA SESSIONE: il browser tiene UNA sola sessione per origine (cookie
+  // condivisi tra le schede). Se in un'altra scheda si fa login con un account
+  // diverso, qui rileviamo il cambio e ricarichiamo, così non si mostrano mai
+  // dati "misti" di un altro utente.
+  const utenteRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const supabase = createClient();
+    const reagisci = (uid: string | null) => {
+      if (utenteRef.current === undefined) {
+        utenteRef.current = uid; // primo rilevamento: registra e basta
+        return;
+      }
+      if (uid !== utenteRef.current) {
+        utenteRef.current = uid;
+        clearLocal();
+        window.location.reload();
+      }
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      reagisci(session?.user?.id ?? null);
+    });
+    // Al ritorno sulla scheda (focus/visibilità) ri-controlla il cookie corrente.
+    const ricontrolla = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        reagisci(data.session?.user?.id ?? null);
+      } catch {
+        /* ignora */
+      }
+    };
+    const onFocus = () => ricontrolla();
+    const onVis = () => {
+      if (document.visibilityState === "visible") ricontrolla();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [clearLocal]);
 
   // Applica la classe .dark su <html>
   useEffect(() => {
