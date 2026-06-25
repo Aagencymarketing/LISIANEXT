@@ -39,6 +39,7 @@ function Chat() {
   const [input, setInput] = useState("");
   const [convId, setConvId] = useState<string | undefined>();
   const [clienteId, setClienteId] = useState<string | undefined>();
+  const [causaId, setCausaId] = useState<string | undefined>();
   const convIdRef = useRef<string | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -60,6 +61,7 @@ function Chat() {
         titolo: primaDomanda.slice(0, 90),
         messaggi: completi,
         clienteId,
+        causaId,
         createdAt: oggi(),
         updatedAt: oggi(),
       };
@@ -143,6 +145,7 @@ function Chat() {
     setConvId(undefined);
     convIdRef.current = undefined;
     setClienteId(undefined);
+    setCausaId(undefined);
   }
 
   function apri(c: ConversazioneAI) {
@@ -153,11 +156,18 @@ function Chat() {
     setConvId(c.id);
     convIdRef.current = c.id;
     setClienteId(c.clienteId);
+    setCausaId(c.causaId);
   }
 
   function collega(id?: string) {
     setClienteId(id);
-    if (convIdRef.current) updateConversazione(convIdRef.current, { clienteId: id });
+    setCausaId(undefined); // cambiando cliente azzero la pratica
+    if (convIdRef.current) updateConversazione(convIdRef.current, { clienteId: id, causaId: undefined });
+  }
+
+  function collegaCausa(id?: string) {
+    setCausaId(id);
+    if (convIdRef.current) updateConversazione(convIdRef.current, { causaId: id });
   }
 
   // Auto-invio da query (?q=)
@@ -184,6 +194,7 @@ function Chat() {
   }, [params, conversazioni]);
 
   const vuota = messaggi.length === 0 && !streaming;
+  const causeCliente = clienti.find((c) => c.id === clienteId)?.cause ?? [];
   const trascrizione = messaggi
     .map((m) => (m.ruolo === "utente" ? `## Domanda\n\n${m.contenuto}` : `## Risposta\n\n${m.contenuto}`))
     .join("\n\n");
@@ -213,6 +224,21 @@ function Chat() {
                 ))}
               </select>
             </div>
+            {causeCliente.length > 0 && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1">
+                <select
+                  value={causaId || ""}
+                  onChange={(e) => collegaCausa(e.target.value || undefined)}
+                  className="max-w-[160px] bg-transparent text-sm outline-none"
+                  aria-label="Pratica"
+                >
+                  <option value="">Nessuna pratica</option>
+                  {causeCliente.map((c) => (
+                    <option key={c.id} value={c.id}>{c.oggetto}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {!vuota && messaggi.length > 0 && (
               <EsportaButtons titolo={messaggi[0]?.contenuto || "Conversazione"} testo={trascrizione} />
             )}
@@ -243,6 +269,22 @@ function Chat() {
               ))}
             </select>
           </div>
+          {causeCliente.length > 0 && (
+            <div className="flex w-full items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1.5">
+              <Link2 size={14} className="shrink-0 text-muted-2" />
+              <select
+                value={causaId || ""}
+                onChange={(e) => collegaCausa(e.target.value || undefined)}
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                aria-label="Pratica"
+              >
+                <option value="">Nessuna pratica</option>
+                {causeCliente.map((c) => (
+                  <option key={c.id} value={c.id}>{c.oggetto}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {!aiPanelOpen && (
             <button
               onClick={toggleAiPanel}
