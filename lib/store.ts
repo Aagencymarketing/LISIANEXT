@@ -20,6 +20,7 @@ import { caricaPreferiti, addPreferitoDb, removePreferitoDb } from "./db/preferi
 import {
   caricaSentenzeCliente,
   addSentenzaClienteDb,
+  updateSentenzaClienteDb,
   removeSentenzaClienteDb,
 } from "./db/sentenzeCliente";
 import {
@@ -88,7 +89,8 @@ interface AppState {
   removeConversazione: (id: string) => void;
   addCronologia: (v: Omit<VoceCronologia, "id" | "createdAt">) => void;
   togglePreferito: (sentenza: SentenzaRisultato) => void;
-  addSentenzaCliente: (clienteId: string, sentenza: SentenzaRisultato) => void;
+  addSentenzaCliente: (clienteId: string, sentenza: SentenzaRisultato, causaId?: string) => void;
+  updateSentenzaCliente: (id: string, causaId?: string) => void;
   removeSentenzaCliente: (id: string) => void;
 
   // ---- UI azioni ----
@@ -338,12 +340,19 @@ export const useApp = create<AppState>()(
         persistWrite(presente ? removePreferitoDb(sentenza.id) : addPreferitoDb(sentenza));
       },
 
-      addSentenzaCliente: (clienteId, sentenza) => {
+      addSentenzaCliente: (clienteId, sentenza, causaId) => {
         // niente duplicati della stessa sentenza per lo stesso cliente
         if (get().sentenzeCliente.some((x) => x.clienteId === clienteId && x.sentenza.id === sentenza.id)) return;
-        const rec: SentenzaCliente = { id: uuid(), clienteId, sentenza, createdAt: oggi() };
+        const rec: SentenzaCliente = { id: uuid(), clienteId, causaId, sentenza, createdAt: oggi() };
         set((s) => ({ sentenzeCliente: [rec, ...s.sentenzeCliente] }));
         persistWrite(addSentenzaClienteDb(rec));
+      },
+
+      updateSentenzaCliente: (id, causaId) => {
+        set((s) => ({
+          sentenzeCliente: s.sentenzeCliente.map((x) => (x.id === id ? { ...x, causaId } : x)),
+        }));
+        persistWrite(updateSentenzaClienteDb(id, { causaId: causaId ?? null }));
       },
 
       removeSentenzaCliente: (id) => {

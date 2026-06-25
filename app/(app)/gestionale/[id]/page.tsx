@@ -82,6 +82,7 @@ export default function ClienteDetailPage() {
   const updateConversazione = useApp((s) => s.updateConversazione);
   const sentenzeCliente = useApp((s) => s.sentenzeCliente);
   const removeSentenzaCliente = useApp((s) => s.removeSentenzaCliente);
+  const updateSentenzaCliente = useApp((s) => s.updateSentenzaCliente);
 
   const cliente = clienti.find((c) => c.id === id);
 
@@ -414,7 +415,14 @@ export default function ClienteDetailPage() {
               </p>
               <div className="space-y-2">
                 {sentenzeDelCliente.map((x) => (
-                  <SentenzaSalvataCard key={x.id} s={x.sentenza} onElimina={() => removeSentenzaCliente(x.id)} />
+                  <SentenzaSalvataCard
+                    key={x.id}
+                    s={x.sentenza}
+                    causaId={x.causaId}
+                    pratiche={cliente.cause.map((ca) => ({ id: ca.id, oggetto: ca.oggetto }))}
+                    onCambiaPratica={(causaId) => updateSentenzaCliente(x.id, causaId)}
+                    onElimina={() => removeSentenzaCliente(x.id)}
+                  />
                 ))}
               </div>
             </div>
@@ -536,7 +544,19 @@ export default function ClienteDetailPage() {
   );
 }
 
-function SentenzaSalvataCard({ s, onElimina }: { s: SentenzaRisultato; onElimina: () => void }) {
+function SentenzaSalvataCard({
+  s,
+  causaId,
+  pratiche,
+  onCambiaPratica,
+  onElimina,
+}: {
+  s: SentenzaRisultato;
+  causaId?: string;
+  pratiche?: { id: string; oggetto: string }[];
+  onCambiaPratica?: (causaId?: string) => void;
+  onElimina: () => void;
+}) {
   const [aperta, setAperta] = useState(false);
   return (
     <div className="rounded-xl border border-border bg-surface p-3.5">
@@ -548,9 +568,24 @@ function SentenzaSalvataCard({ s, onElimina }: { s: SentenzaRisultato; onElimina
             {s.fonte && <span>{s.fonte}</span>}
           </div>
         </div>
-        <button onClick={onElimina} className="shrink-0 rounded p-1 text-muted-2 hover:text-danger" aria-label="Rimuovi sentenza">
-          <Trash2 size={15} />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {pratiche && pratiche.length > 0 && onCambiaPratica && (
+            <Select
+              value={causaId || ""}
+              onChange={(e) => onCambiaPratica(e.target.value || undefined)}
+              className="h-8 w-auto max-w-[160px] py-1 text-xs"
+              aria-label="Collega a una pratica"
+            >
+              <option value="">Nessuna pratica</option>
+              {pratiche.map((p) => (
+                <option key={p.id} value={p.id}>{p.oggetto}</option>
+              ))}
+            </Select>
+          )}
+          <button onClick={onElimina} className="rounded p-1 text-muted-2 hover:text-danger" aria-label="Rimuovi sentenza">
+            <Trash2 size={15} />
+          </button>
+        </div>
       </div>
       {s.massima && <p className="mt-2 text-sm leading-relaxed text-foreground/90">{s.massima}</p>}
       {s.testoCompleto && (

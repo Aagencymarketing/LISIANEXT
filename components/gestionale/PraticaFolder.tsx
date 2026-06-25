@@ -30,6 +30,8 @@ export function PraticaFolder({
   const removeConversazione = useApp((s) => s.removeConversazione);
   const updateConversazione = useApp((s) => s.updateConversazione);
   const updateDocumento = useApp((s) => s.updateDocumento);
+  const sentenzeCliente = useApp((s) => s.sentenzeCliente);
+  const removeSentenzaCliente = useApp((s) => s.removeSentenzaCliente);
   const updateCausa = useApp((s) => s.updateCausa);
   const removeCausa = useApp((s) => s.removeCausa);
   const [aperta, setAperta] = useState(false);
@@ -39,6 +41,7 @@ export function PraticaFolder({
 
   const elaborati = conversazioni.filter((c) => c.causaId === causa.id);
   const documenti = cliente.documenti.filter((d) => d.causaId === causa.id);
+  const sentenze = sentenzeCliente.filter((x) => x.clienteId === cliente.id && x.causaId === causa.id);
   const attivita = cliente.attivita
     .filter((a) => a.causaId === causa.id)
     .sort((a, b) => +new Date(b.data) - +new Date(a.data));
@@ -60,7 +63,7 @@ export function PraticaFolder({
               <Badge tone={STATO_CAUSA[causa.stato].tone}>{STATO_CAUSA[causa.stato].label}</Badge>
               <Badge tone="blue">{MATERIA_CAUSA[causa.materia]}</Badge>
               {causa.controparte && <span>c. {causa.controparte}</span>}
-              <span>· {elaborati.length} elaborati · {documenti.length} documenti</span>
+              <span>· {elaborati.length} elaborati · {documenti.length} documenti{sentenze.length > 0 ? ` · ${sentenze.length} sentenze` : ""}</span>
             </div>
           </div>
         </button>
@@ -90,6 +93,38 @@ export function PraticaFolder({
             <Link href={`/ai/redattore?cliente=${cliente.id}&causa=${causa.id}`}>
               <Button variant="soft" size="sm"><Gavel size={15} /> Redigi atto</Button>
             </Link>
+            {/* Collega un lavoro AI esistente (di questo cliente) a questa pratica */}
+            {conversazioni.some((c) => c.clienteId === cliente.id && c.causaId !== causa.id) && (
+              <Select
+                value=""
+                onChange={(e) => e.target.value && updateConversazione(e.target.value, { causaId: causa.id })}
+                className="h-9 w-auto max-w-[190px] py-1.5 text-xs"
+                aria-label="Collega un lavoro esistente"
+              >
+                <option value="">+ Collega lavoro esistente</option>
+                {conversazioni
+                  .filter((c) => c.clienteId === cliente.id && c.causaId !== causa.id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>{c.titolo}</option>
+                  ))}
+              </Select>
+            )}
+            {/* Collega un documento esistente a questa pratica */}
+            {cliente.documenti.some((d) => d.causaId !== causa.id) && (
+              <Select
+                value=""
+                onChange={(e) => e.target.value && updateDocumento(cliente.id, e.target.value, { causaId: causa.id })}
+                className="h-9 w-auto max-w-[190px] py-1.5 text-xs"
+                aria-label="Collega un documento esistente"
+              >
+                <option value="">+ Collega documento esistente</option>
+                {cliente.documenti
+                  .filter((d) => d.causaId !== causa.id)
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>{d.nome}.{d.estensione}</option>
+                  ))}
+              </Select>
+            )}
             {causa.prossimaUdienza && (
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-2">
                 <CalendarClock size={13} /> Prossima udienza {formatData(causa.prossimaUdienza)}
@@ -149,6 +184,26 @@ export function PraticaFolder({
               </div>
             )}
           </Sezione>
+
+          {/* Sentenze collegate alla pratica */}
+          {sentenze.length > 0 && (
+            <Sezione titolo="Sentenze" count={sentenze.length} icona={<Scale size={14} />}>
+              <div className="space-y-1.5">
+                {sentenze.map((x) => (
+                  <div key={x.id} className="flex items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+                    <Scale size={15} className="mt-0.5 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-primary">{x.sentenza.estremi}</p>
+                      {x.sentenza.massima && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{x.sentenza.massima}</p>}
+                    </div>
+                    <button onClick={() => removeSentenzaCliente(x.id)} className="shrink-0 rounded p-1 text-muted-2 hover:text-danger" aria-label="Rimuovi sentenza">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Sezione>
+          )}
 
           {/* Attività */}
           {attivita.length > 0 && (

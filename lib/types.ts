@@ -147,6 +147,7 @@ export interface SentenzaRisultato {
 export interface SentenzaCliente {
   id: string;
   clienteId: string;
+  causaId?: string;
   sentenza: SentenzaRisultato;
   createdAt: string;
 }
