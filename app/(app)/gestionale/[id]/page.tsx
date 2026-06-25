@@ -75,9 +75,11 @@ export default function ClienteDetailPage() {
   const addAttivita = useApp((s) => s.addAttivita);
   const removeAttivita = useApp((s) => s.removeAttivita);
   const addDocumento = useApp((s) => s.addDocumento);
+  const updateDocumento = useApp((s) => s.updateDocumento);
   const removeDocumento = useApp((s) => s.removeDocumento);
   const conversazioni = useApp((s) => s.conversazioni);
   const removeConversazione = useApp((s) => s.removeConversazione);
+  const updateConversazione = useApp((s) => s.updateConversazione);
   const sentenzeCliente = useApp((s) => s.sentenzeCliente);
   const removeSentenzaCliente = useApp((s) => s.removeSentenzaCliente);
 
@@ -393,7 +395,13 @@ export default function ClienteDetailPage() {
           ) : (
             <div className="space-y-2">
               {lavoriCliente.map((c) => (
-                <ElaboratoCard key={c.id} c={c} onElimina={() => removeConversazione(c.id)} />
+                <ElaboratoCard
+                  key={c.id}
+                  c={c}
+                  onElimina={() => removeConversazione(c.id)}
+                  pratiche={cliente.cause.map((ca) => ({ id: ca.id, oggetto: ca.oggetto }))}
+                  onCambiaPratica={(causaId) => updateConversazione(c.id, { causaId })}
+                />
               ))}
             </div>
           )}
@@ -440,17 +448,27 @@ export default function ClienteDetailPage() {
             <EmptyState icon={<FileText size={24} />} title="Nessun documento" description="Carica i documenti della pratica (simulato nella demo)." />
           ) : (
             cliente.documenti.map((d) => (
-              <div key={d.id} className="card flex items-center gap-3 p-4">
+              <div key={d.id} className="card flex flex-wrap items-center gap-3 p-4">
                 <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary-soft text-primary">
                   <FileText size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{d.nome}.{d.estensione}</p>
-                  <p className="text-xs text-muted-2">
-                    {formatData(d.createdAt)}
-                    {d.causaId && cliente.cause.find((c) => c.id === d.causaId) && ` · ${cliente.cause.find((c) => c.id === d.causaId)!.oggetto}`}
-                  </p>
+                  <p className="text-xs text-muted-2">{formatData(d.createdAt)}</p>
                 </div>
+                {cliente.cause.length > 0 && (
+                  <Select
+                    value={d.causaId || ""}
+                    onChange={(e) => updateDocumento(cliente.id, d.id, { causaId: e.target.value || undefined })}
+                    className="h-9 w-auto max-w-[200px] py-1.5 text-xs"
+                    aria-label="Collega a una pratica"
+                  >
+                    <option value="">Nessuna pratica</option>
+                    {cliente.cause.map((c) => (
+                      <option key={c.id} value={c.id}>{c.oggetto}</option>
+                    ))}
+                  </Select>
+                )}
                 <button onClick={() => scaricaDoc(d.storagePath)} disabled={!d.storagePath} className="rounded-lg p-2 text-muted-2 hover:text-foreground disabled:opacity-40" aria-label="Scarica"><Download size={16} /></button>
                 <button onClick={() => eliminaDoc(d.id, d.storagePath)} className="rounded-lg p-2 text-muted-2 hover:text-danger" aria-label="Elimina"><Trash2 size={16} /></button>
               </div>

@@ -28,9 +28,14 @@ export function PraticaFolder({
 }) {
   const conversazioni = useApp((s) => s.conversazioni);
   const removeConversazione = useApp((s) => s.removeConversazione);
+  const updateConversazione = useApp((s) => s.updateConversazione);
+  const updateDocumento = useApp((s) => s.updateDocumento);
   const updateCausa = useApp((s) => s.updateCausa);
   const removeCausa = useApp((s) => s.removeCausa);
   const [aperta, setAperta] = useState(false);
+
+  // Elenco pratiche per spostare elaborati/documenti tra pratiche del cliente.
+  const pratiche = cliente.cause.map((ca) => ({ id: ca.id, oggetto: ca.oggetto }));
 
   const elaborati = conversazioni.filter((c) => c.causaId === causa.id);
   const documenti = cliente.documenti.filter((d) => d.causaId === causa.id);
@@ -102,7 +107,13 @@ export function PraticaFolder({
             ) : (
               <div className="space-y-2">
                 {elaborati.map((c) => (
-                  <ElaboratoCard key={c.id} c={c} onElimina={() => removeConversazione(c.id)} />
+                  <ElaboratoCard
+                    key={c.id}
+                    c={c}
+                    onElimina={() => removeConversazione(c.id)}
+                    pratiche={pratiche}
+                    onCambiaPratica={(causaId) => updateConversazione(c.id, { causaId })}
+                  />
                 ))}
               </div>
             )}
@@ -115,10 +126,22 @@ export function PraticaFolder({
             ) : (
               <div className="space-y-1.5">
                 {documenti.map((d) => (
-                  <div key={d.id} className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+                  <div key={d.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
                     <FileText size={15} className="text-primary" />
-                    <span className="flex-1 truncate">{d.nome}.{d.estensione}</span>
-                    <span className="text-xs text-muted-2">{formatData(d.createdAt)}</span>
+                    <span className="min-w-0 flex-1 truncate">{d.nome}.{d.estensione}</span>
+                    {pratiche.length > 0 && (
+                      <Select
+                        value={d.causaId || ""}
+                        onChange={(e) => updateDocumento(cliente.id, d.id, { causaId: e.target.value || undefined })}
+                        className="h-8 w-auto max-w-[150px] py-1 text-xs"
+                        aria-label="Collega a una pratica"
+                      >
+                        <option value="">Nessuna pratica</option>
+                        {pratiche.map((p) => (
+                          <option key={p.id} value={p.id}>{p.oggetto}</option>
+                        ))}
+                      </Select>
+                    )}
                     <button onClick={() => onScaricaDoc(d.storagePath)} disabled={!d.storagePath} className="rounded p-1 text-muted-2 hover:text-foreground disabled:opacity-40" aria-label="Scarica"><Download size={15} /></button>
                     <button onClick={() => onEliminaDoc(d.id, d.storagePath)} className="rounded p-1 text-muted-2 hover:text-danger" aria-label="Elimina"><Trash2 size={15} /></button>
                   </div>

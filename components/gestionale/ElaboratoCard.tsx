@@ -3,10 +3,10 @@
 import { useState } from "react";
 import type { ConversazioneAI, ModuloAI } from "@/lib/types";
 import { formatData } from "@/lib/utils";
-import { Badge, type Tone } from "@/components/ui";
+import { Badge, Select, type Tone } from "@/components/ui";
 import { Markdown } from "@/components/Markdown";
 import { EsportaButtons } from "@/components/ai/EsportaButtons";
-import { ChevronDown, Trash2 } from "lucide-react";
+import { ChevronDown, Trash2, Link2 } from "lucide-react";
 
 export const BADGE_MODULO: Record<ModuloAI, { label: string; tone: Tone }> = {
   risposta_immediata: { label: "Risposta AI", tone: "blue" },
@@ -15,8 +15,19 @@ export const BADGE_MODULO: Record<ModuloAI, { label: string; tone: Tone }> = {
   ricerche: { label: "Ricerca", tone: "gray" },
 };
 
-/** Card espandibile di un elaborato AI: testo integrale + export + elimina. */
-export function ElaboratoCard({ c, onElimina }: { c: ConversazioneAI; onElimina: () => void }) {
+/** Card espandibile di un elaborato AI: testo integrale + export + elimina.
+ *  Se `pratiche` è fornito, mostra un selettore per collegare/spostare l'elaborato a una pratica. */
+export function ElaboratoCard({
+  c,
+  onElimina,
+  pratiche,
+  onCambiaPratica,
+}: {
+  c: ConversazioneAI;
+  onElimina: () => void;
+  pratiche?: { id: string; oggetto: string }[];
+  onCambiaPratica?: (causaId?: string) => void;
+}) {
   const [aperto, setAperto] = useState(false);
   const meta = BADGE_MODULO[c.modulo];
   const contenuto = c.messaggi.find((m) => m.ruolo === "assistente")?.contenuto || "";
@@ -27,14 +38,47 @@ export function ElaboratoCard({ c, onElimina }: { c: ConversazioneAI; onElimina:
           <ChevronDown size={15} className={`shrink-0 text-muted-2 transition ${aperto ? "rotate-180" : ""}`} />
           <Badge tone={meta.tone}>{meta.label}</Badge>
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.titolo}</span>
-          <span className="shrink-0 text-xs text-muted-2">{formatData(c.updatedAt)}</span>
+          <span className="hidden shrink-0 text-xs text-muted-2 sm:block">{formatData(c.updatedAt)}</span>
         </button>
+        {pratiche && pratiche.length > 0 && onCambiaPratica && (
+          <span className="hidden items-center gap-1 sm:inline-flex">
+            <Link2 size={13} className="shrink-0 text-muted-2" />
+            <Select
+              value={c.causaId || ""}
+              onChange={(e) => onCambiaPratica(e.target.value || undefined)}
+              className="h-8 w-auto max-w-[170px] py-1 text-xs"
+              aria-label="Collega a una pratica"
+            >
+              <option value="">Nessuna pratica</option>
+              {pratiche.map((p) => (
+                <option key={p.id} value={p.id}>{p.oggetto}</option>
+              ))}
+            </Select>
+          </span>
+        )}
         <button onClick={onElimina} className="shrink-0 rounded p-1 text-muted-2 hover:text-danger" aria-label="Elimina elaborato">
           <Trash2 size={14} />
         </button>
       </div>
       {aperto && (
         <div className="border-t border-border p-4">
+          {/* Selettore pratica anche su mobile, dentro l'elaborato aperto */}
+          {pratiche && pratiche.length > 0 && onCambiaPratica && (
+            <div className="mb-3 flex items-center gap-2 sm:hidden">
+              <Link2 size={14} className="shrink-0 text-muted-2" />
+              <Select
+                value={c.causaId || ""}
+                onChange={(e) => onCambiaPratica(e.target.value || undefined)}
+                className="h-9 flex-1 py-1.5 text-xs"
+                aria-label="Collega a una pratica"
+              >
+                <option value="">Nessuna pratica</option>
+                {pratiche.map((p) => (
+                  <option key={p.id} value={p.id}>{p.oggetto}</option>
+                ))}
+              </Select>
+            </div>
+          )}
           <div className="max-h-[60vh] overflow-y-auto">
             <Markdown>{contenuto}</Markdown>
           </div>

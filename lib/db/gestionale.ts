@@ -198,6 +198,13 @@ export async function insertDocumento(
   if (error) throw error;
 }
 
+export async function updateDocumentoDb(docId: string, patch: { causaId?: string | null }) {
+  const row: Record<string, unknown> = {};
+  if ("causaId" in patch) row.causa_id = patch.causaId ?? null;
+  const { error } = await db().from("documenti").update(row).eq("id", docId);
+  if (error) throw error;
+}
+
 export async function deleteDocumentoDb(docId: string) {
   const { error } = await db().from("documenti").delete().eq("id", docId);
   if (error) throw error;

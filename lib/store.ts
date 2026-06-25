@@ -79,6 +79,7 @@ interface AppState {
     d: Omit<Documento, "id" | "createdAt">,
     storagePath?: string,
   ) => void;
+  updateDocumento: (clienteId: string, docId: string, patch: { causaId?: string }) => void;
   removeDocumento: (clienteId: string, docId: string) => void;
 
   // ---- AI / cronologia ----
@@ -278,6 +279,18 @@ export const useApp = create<AppState>()(
           })),
         }));
         persistWrite(gdb.insertDocumento(clienteId, nuovo));
+      },
+
+      updateDocumento: (clienteId, docId, patch) => {
+        set((s) => ({
+          clienti: mutaCliente(s.clienti, clienteId, (cl) => ({
+            ...cl,
+            documenti: cl.documenti.map((dd) =>
+              dd.id === docId ? { ...dd, ...patch } : dd,
+            ),
+          })),
+        }));
+        persistWrite(gdb.updateDocumentoDb(docId, { causaId: patch.causaId ?? null }));
       },
 
       removeDocumento: (clienteId, docId) => {
