@@ -121,7 +121,7 @@ export const useApp = create<AppState>()(
 
       theme: "light",
       sidebarCollapsed: false,
-      aiPanelOpen: true,
+      aiPanelOpen: false,
       hasHydrated: false,
 
       hydrateFromSupabase: async () => {
@@ -369,10 +369,18 @@ export const useApp = create<AppState>()(
     {
       name: "lisianext-ui",
       storage: createJSONStorage(() => localStorage),
+      // aiPanelOpen NON è persistito: il pannello "conversazioni passate" parte
+      // sempre CHIUSO (schermata normale); aprirlo è una scelta dell'utente.
       partialize: (s) => ({
         theme: s.theme,
         sidebarCollapsed: s.sidebarCollapsed,
-        aiPanelOpen: s.aiPanelOpen,
+      }),
+      // Forza il pannello chiuso a ogni caricamento, ignorando eventuali valori
+      // vecchi salvati in localStorage.
+      merge: (persisted, current) => ({
+        ...current,
+        ...((persisted as Record<string, unknown>) ?? {}),
+        aiPanelOpen: false,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
