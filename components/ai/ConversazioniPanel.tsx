@@ -36,7 +36,7 @@ export function ConversazioniPanel({
   const meta = TIPO_MODULO[modulo];
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <MessageSquare size={16} className="text-primary" />
@@ -66,7 +66,7 @@ export function ConversazioniPanel({
         </div>
       </div>
 
-      <div className="flex-1 space-y-1.5 overflow-y-auto">
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
         {lista.length === 0 ? (
           <p className="px-1 py-6 text-center text-sm text-muted-2">
             Nessun elemento salvato.

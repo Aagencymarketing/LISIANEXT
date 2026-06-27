@@ -19,7 +19,7 @@ import { Button, Textarea } from "@/components/ui";
 import { fileToInline, type VarianteParere } from "@/lib/ai/client";
 import { nomeCliente, type ConversazioneAI } from "@/lib/types";
 import { uid, uuid, oggi } from "@/lib/utils";
-import { FileSearch, Send, Square, Check, Plus, User, Copy } from "lucide-react";
+import { FileSearch, Send, Square, Check, Plus, User, Copy, FolderOpen } from "lucide-react";
 
 function PareriInner() {
   const params = useSearchParams();
@@ -35,6 +35,7 @@ function PareriInner() {
   const [files, setFiles] = useState<File[]>([]);
   const [clienteId, setClienteId] = useState<string>();
   const [causaId, setCausaId] = useState<string>();
+  const [usaFascicolo, setUsaFascicolo] = useState(false);
   const [convId, setConvId] = useState<string>();
   const [copiato, setCopiato] = useState(false);
   const [variante, setVariante] = useState<VarianteParere>("completo");
@@ -50,10 +51,21 @@ function PareriInner() {
   const cliente = clienti.find((c) => c.id === clienteId);
   const causa = cliente?.cause.find((c) => c.id === causaId);
 
+  // Documenti del fascicolo del cliente (già caricati nel gestionale) leggibili
+  // dall'AI; se è selezionata una pratica, solo quelli della pratica.
+  const ANALIZZABILI = ["pdf", "png", "jpg", "jpeg", "webp", "gif", "txt"];
+  const docFascicolo = (cliente?.documenti ?? []).filter(
+    (d) =>
+      d.storagePath &&
+      ANALIZZABILI.includes(d.estensione.toLowerCase()) &&
+      (!causaId || d.causaId === causaId),
+  );
+
   // Cambia cliente/causa e mantiene sincronizzato il parere già salvato
   const setCliente = (id?: string) => {
     setClienteId(id);
     setCausaId(undefined);
+    setUsaFascicolo(false);
     if (convId) updateConversazione(convId, { clienteId: id, causaId: undefined });
   };
   const setCausa = (id?: string) => {
@@ -65,7 +77,11 @@ function PareriInner() {
     if (!quesito.trim()) return;
     setConvId(undefined);
     const documentiInline = files.length ? await Promise.all(files.map(fileToInline)) : undefined;
-    const testo = await run(quesito, { cliente, causa }, { variante, documentiInline });
+    const documenti =
+      usaFascicolo && docFascicolo.length
+        ? docFascicolo.map((d) => ({ path: d.storagePath!, nome: `${d.nome}.${d.estensione}`, estensione: d.estensione }))
+        : undefined;
+    const testo = await run(quesito, { cliente, causa }, { variante, documentiInline, documenti });
     if (testo) {
       const id = uuid();
       setConvId(id);
@@ -106,6 +122,7 @@ function PareriInner() {
     setFiles([]);
     setClienteId(undefined);
     setCausaId(undefined);
+    setUsaFascicolo(false);
     setConvId(undefined);
   };
 
@@ -168,6 +185,23 @@ function PareriInner() {
                 onCliente={setCliente}
                 onCausa={setCausa}
               />
+              {/* Carica i documenti già presenti nel fascicolo del cliente/pratica */}
+              {cliente && docFascicolo.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setUsaFascicolo((v) => !v)}
+                  className={`mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    usaFascicolo
+                      ? "border-primary/50 bg-primary-soft text-primary"
+                      : "border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                  }`}
+                >
+                  {usaFascicolo ? <Check size={14} /> : <FolderOpen size={14} />}
+                  {usaFascicolo
+                    ? `Documenti del fascicolo inclusi (${docFascicolo.length})`
+                    : `Carica i documenti del fascicolo (${docFascicolo.length})`}
+                </button>
+              )}
             </div>
 
             <div className="mt-5 flex justify-end gap-2">
@@ -218,7 +252,7 @@ function PareriInner() {
 
         {aiPanelOpen && (
           <aside className="hidden w-72 shrink-0 lg:block">
-            <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
+            <div className="card sticky top-4 flex max-h-[calc(100dvh-9rem)] flex-col p-4">
               <ConversazioniPanel
                 modulo="pareri"
                 titolo="Pareri fatti"

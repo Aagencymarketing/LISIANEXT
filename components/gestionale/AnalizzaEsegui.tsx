@@ -85,13 +85,35 @@ export function AnalizzaEsegui({
 
   const buildPrompt = () => {
     const rifPratica = causa ? ` nella pratica "${causa.oggetto}"` : "";
-    const rifDoc = docIds.length ? " Analizza anche i documenti allegati." : "";
-    const istr = istruzioni.trim() ? ` Istruzioni specifiche: ${istruzioni.trim()}.` : "";
+    // Direttiva forte sull'uso del contesto del cliente e dei documenti: così il
+    // lavoro generato dal fascicolo esce completo e curato come dal Redattore/Pareri,
+    // anche quando l'utente non scrive istruzioni specifiche.
+    const usaTutto =
+      " Sfrutta APPIENO tutti i dati del cliente e della pratica presenti nel contesto" +
+      (docIds.length
+        ? " e i DOCUMENTI allegati: estrai dagli allegati i fatti specifici (parti, date, importi, foro, controparte, numeri di delibera/protocollo) e costruisci il testo su quei fatti reali, non per ipotesi astratte."
+        : ": usa i fatti reali del cliente e della pratica, non ipotesi astratte.");
+    const istr = istruzioni.trim() ? ` Istruzioni specifiche dell'avvocato: ${istruzioni.trim()}.` : "";
+
     if (azione === "pareri")
-      return `Redigi un parere legale approfondito sulla posizione del cliente ${nome}${rifPratica}.${istr}${rifDoc}`;
+      return (
+        `Redigi un parere legale APPROFONDITO e COMPLETO sulla posizione del cliente ${nome}${rifPratica}, ` +
+        `con la struttura piena (intestazione, quesito, esposizione dei fatti, quadro normativo, analisi, conclusioni operative).` +
+        usaTutto +
+        istr
+      );
     if (azione === "redattore")
-      return `${istruzioni.trim() || `Redigi l'atto per il cliente ${nome}${rifPratica}.`}${rifDoc}`;
-    return istruzioni.trim() || `Analizza la posizione del cliente ${nome}${rifPratica} e indica le priorità operative.`;
+      return (
+        `Redigi «${tipoAttoEff}» per il cliente ${nome}${rifPratica}, completo e pronto per la revisione, ` +
+        `con tutte le sezioni e le formule di rito proprie di questo tipo di atto.` +
+        usaTutto +
+        istr
+      );
+    return (
+      `Analizza la posizione del cliente ${nome}${rifPratica} e indica le priorità operative.` +
+      usaTutto +
+      istr
+    );
   };
 
   const titoloPer = () => {
@@ -177,7 +199,7 @@ export function AnalizzaEsegui({
     footer = (
       <>
         <Button variant="secondary" onClick={chiudi}>Annulla</Button>
-        <Button onClick={esegui}>Analizza ed esegui</Button>
+        <Button onClick={esegui}>Lavora sul fascicolo</Button>
       </>
     );
   }
@@ -185,7 +207,7 @@ export function AnalizzaEsegui({
   const mostraForm = !loading && !output;
 
   return (
-    <Modal open={open} onClose={chiudi} title={`Analizza ed esegui · ${nome}`} wide footer={footer}>
+    <Modal open={open} onClose={chiudi} title={`Lavora sul fascicolo · ${nome}`} wide footer={footer}>
       {mostraForm ? (
         <div className="space-y-5">
           {/* Azione */}

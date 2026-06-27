@@ -282,9 +282,6 @@ export default function ClienteDetailPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => apriAnalizza(undefined)}>
-              <Sparkles size={15} /> Analizza ed esegui
-            </Button>
             <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil size={15} /> Modifica
             </Button>
@@ -293,6 +290,13 @@ export default function ClienteDetailPage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Azione principale: a sinistra, sotto il riquadro del cliente */}
+      <div className="mb-5">
+        <Button onClick={() => apriAnalizza(undefined)}>
+          <Sparkles size={16} /> Lavora sul fascicolo
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -383,15 +387,15 @@ export default function ClienteDetailPage() {
               Tutti i pareri, atti, risposte e analisi generati per questo cliente — apribili ed esportabili.
             </p>
             <Button size="sm" onClick={() => apriAnalizza(undefined)} className="shrink-0">
-              <Sparkles size={15} /> Analizza ed esegui
+              <Sparkles size={15} /> Lavora sul fascicolo
             </Button>
           </div>
           {lavoriCliente.length === 0 ? (
             <EmptyState
               icon={<Sparkles size={24} />}
               title="Nessun lavoro AI"
-              description="Usa “Analizza ed esegui”, oppure collega questo cliente da Pareri, Atti o Risposte interattive: i lavori compariranno qui."
-              action={<Button size="sm" onClick={() => apriAnalizza(undefined)}><Sparkles size={15} /> Analizza ed esegui</Button>}
+              description="Usa “Lavora sul fascicolo”, oppure collega questo cliente da Pareri, Atti o Risposte interattive: i lavori compariranno qui."
+              action={<Button size="sm" onClick={() => apriAnalizza(undefined)}><Sparkles size={15} /> Lavora sul fascicolo</Button>}
             />
           ) : (
             <div className="space-y-2">

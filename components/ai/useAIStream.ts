@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { type ContestoAI } from "@/lib/ai/mock";
-import { streamAI, type VarianteParere, type DocumentoInline } from "@/lib/ai/client";
+import { streamAI, type VarianteParere, type DocumentoInline, type DocumentoRef } from "@/lib/ai/client";
 import type { ModuloAI } from "@/lib/types";
 
 export function useAIStream(modulo: ModuloAI) {
@@ -14,7 +14,7 @@ export function useAIStream(modulo: ModuloAI) {
     async (
       prompt: string,
       ctx?: ContestoAI,
-      opts?: { variante?: VarianteParere; documentiInline?: DocumentoInline[] },
+      opts?: { variante?: VarianteParere; documentiInline?: DocumentoInline[]; documenti?: DocumentoRef[] },
     ): Promise<string | null> => {
       abortRef.current?.abort();
       const ac = new AbortController();
@@ -30,7 +30,7 @@ export function useAIStream(modulo: ModuloAI) {
           (parziale) => setOutput(parziale),
           ac.signal,
           undefined,
-          undefined,
+          opts?.documenti,
           opts?.variante,
           opts?.documentiInline,
         );

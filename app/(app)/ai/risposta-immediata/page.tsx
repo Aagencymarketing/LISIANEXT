@@ -401,7 +401,7 @@ function Chat() {
       {/* Pannello conversazioni salvate (richiudibile) */}
       {aiPanelOpen && (
         <aside className="hidden w-72 shrink-0 lg:block">
-          <div className="card h-full p-4">
+          <div className="card flex h-full flex-col p-4">
             <ConversazioniPanel
               modulo="risposta_immediata"
               titolo="Conversazioni"

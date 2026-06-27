@@ -88,7 +88,7 @@ export function PraticaFolder({
           {/* Dati pratica + azioni */}
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={() => onAnalizza(causa.id)}>
-              <Sparkles size={15} /> Analizza ed esegui
+              <Sparkles size={15} /> Lavora sul fascicolo
             </Button>
             <Link href={`/ai/redattore?cliente=${cliente.id}&causa=${causa.id}`}>
               <Button variant="soft" size="sm"><Gavel size={15} /> Redigi atto</Button>
@@ -138,7 +138,7 @@ export function PraticaFolder({
           {/* Elaborati AI */}
           <Sezione titolo="Elaborati AI" count={elaborati.length} icona={<Scale size={14} />}>
             {elaborati.length === 0 ? (
-              <Vuoto testo="Nessun parere/atto ancora. Usa “Analizza ed esegui”." />
+              <Vuoto testo="Nessun parere/atto ancora. Usa “Lavora sul fascicolo”." />
             ) : (
               <div className="space-y-2">
                 {elaborati.map((c) => (

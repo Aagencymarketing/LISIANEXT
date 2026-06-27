@@ -18,7 +18,7 @@ export function FileDrop({
   const add = (list: FileList | null) => {
     if (!list) return;
     const validi = Array.from(list).filter((f) => f.size <= MAX_FILE);
-    onChange([...files, ...validi].slice(0, 5));
+    onChange([...files, ...validi].slice(0, 10));
   };
 
   return (
@@ -41,7 +41,7 @@ export function FileDrop({
       >
         <Upload size={22} className="mx-auto mb-2 text-muted" />
         <p className="text-sm font-medium">Trascina qui i documenti o clicca per selezionarli</p>
-        <p className="mt-0.5 text-xs text-muted-2">PDF, immagini (JPG/PNG) o TXT — max 5 file, 10 MB ciascuno</p>
+        <p className="mt-0.5 text-xs text-muted-2">PDF, immagini (JPG/PNG) o TXT — max 10 file, 10 MB ciascuno</p>
         <input
           ref={inputRef}
           type="file"

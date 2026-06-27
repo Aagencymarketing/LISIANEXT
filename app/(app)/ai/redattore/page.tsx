@@ -252,7 +252,7 @@ function Redattore() {
 
         {aiPanelOpen && (
           <aside className="hidden w-72 shrink-0 lg:block">
-            <div className="card sticky top-4 max-h-[calc(100dvh-9rem)] p-4">
+            <div className="card sticky top-4 flex max-h-[calc(100dvh-9rem)] flex-col p-4">
               <ConversazioniPanel
                 modulo="redattore"
                 titolo="Bozze fatte"
