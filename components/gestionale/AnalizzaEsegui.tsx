@@ -268,9 +268,27 @@ export function AnalizzaEsegui({
 
           {/* Documenti */}
           <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
-              Documenti da analizzare
-            </p>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                Documenti da analizzare
+                {docAnalizzabili.length > 0 && (
+                  <span className="ml-1 text-muted-2">({docIds.length}/{docAnalizzabili.length})</span>
+                )}
+              </p>
+              {docAnalizzabili.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocIds(
+                      docIds.length === docAnalizzabili.length ? [] : docAnalizzabili.map((d) => d.id),
+                    )
+                  }
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  {docIds.length === docAnalizzabili.length ? "Deseleziona tutti" : "Seleziona tutti"}
+                </button>
+              )}
+            </div>
             {docAnalizzabili.length === 0 ? (
               <p className="text-sm text-muted-2">
                 Nessun documento analizzabile allegato. Caricane uno (PDF, immagini o TXT) nella scheda Documenti.
